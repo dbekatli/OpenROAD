@@ -362,13 +362,16 @@ _installOrTools() {
     done
 
     orToolsPath=${PREFIX:-"/opt/or-tools"}
-    if [ -f ${orToolsPath}/lib64/libortools.so ]; then
+    if [ ! -f ${orToolsPath}/lib64/libortools.so ]; then
         echo "OR-TOOLS NOT FOUND"
         echo "Installing  OR-Tools for amd64..."
         git clone --depth=1 -b "v${orToolsVersionBig}" https://github.com/google/or-tools.git
         cd or-tools
         ${cmakePrefix}/bin/cmake -S. -Bbuild -DBUILD_DEPS:BOOL=ON -DBUILD_EXAMPLES:BOOL=OFF -DBUILD_SAMPLES:BOOL=OFF -DBUILD_TESTING:BOOL=OFF -DCMAKE_INSTALL_PREFIX=${orToolsPath} -DCMAKE_CXX_FLAGS="${CXXFLAGS} -w" -DCMAKE_C_FLAGS="${CFLAGS} -w" -DCMAKE_C_COMPILER="${CC}" -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_AR="${AR}" -DCMAKE_RANLIB="${RANLIB}"
         ${cmakePrefix}/bin/cmake --build build --config Release --target install -v -j $(nproc)
+    
+    else 
+	echo "or tools intalled"
     fi
     # else
     #     if [[ $osVersion == rodete ]]; then
