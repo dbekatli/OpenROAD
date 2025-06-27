@@ -600,11 +600,32 @@ int NesterovPlace::doNesterovPlace(int start_iter)
           // 3. updateareas
           // 4. updateDensitySize
 
-          nesterov->setTargetDensity(
-              static_cast<float>(nbc_->getDeltaArea()
-                                 + nesterov->nesterovInstsArea()
-                                 + nesterov->totalFillerArea())
-              / static_cast<float>(nesterov->whiteSpaceArea()));
+          // nesterov->setTargetDensity(
+          //     static_cast<float>(nbc_->getDeltaArea()
+          //                        + nesterov->nesterovInstsArea()
+          //                        + nesterov->getTotalFillerArea())
+          //     / static_cast<float>(nesterov->whiteSpaceArea()));
+
+
+int64_t deltaArea = nbc_->getDeltaArea();
+int64_t instArea = nesterov->nesterovInstsArea();
+int64_t fillerArea = nesterov->getTotalFillerArea();
+int64_t wsArea = nesterov->whiteSpaceArea();
+
+int64_t totalGCellArea = deltaArea + instArea + fillerArea;
+float newTargetDensity = static_cast<float>(totalGCellArea)
+                         / static_cast<float>(wsArea);
+
+log_->report("Density update breakdown (original method):");
+log_->report("  deltaArea (inflatedAreaDelta_): {}", block->dbuAreaToMicrons(deltaArea));
+log_->report("  nesterovInstsArea: {}", block->dbuAreaToMicrons(instArea));
+log_->report("  totalFillerArea: {}", block->dbuAreaToMicrons(fillerArea));
+log_->report("  whiteSpaceArea: {}", block->dbuAreaToMicrons(wsArea));
+log_->report("  totalGCellArea: {}", block->dbuAreaToMicrons(totalGCellArea));
+log_->report("  New target density: {}", newTargetDensity);
+
+
+          nesterov->cutFillerCells(nbc_->getDeltaArea());
 
           float rsz_delta_area_microns
               = block->dbuAreaToMicrons(nbc_->getDeltaArea());
@@ -805,6 +826,11 @@ int NesterovPlace::doNesterovPlace(int start_iter)
       std::pair<bool, bool> result = rb_->routability();
       is_routability_need_ = result.first;
       bool isRevertInitNeeded = result.second;
+
+      if(is_routability_need_==false && isRevertInitNeeded==true) {
+        nbVec_[0]->updateGCellState(wireLengthCoefX_, wireLengthCoefY_);
+        // nbVec_[0]->printGCellsToFile("afterRestore.txt",false);
+      }
 
       // if routability is needed
       if (is_routability_need_ || isRevertInitNeeded) {
