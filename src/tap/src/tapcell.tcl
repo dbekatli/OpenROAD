@@ -33,8 +33,8 @@ proc tapcell { args } {
               -tap_nwout2_master -tap_nwout3_master -tap_nwintie_master \
               -tap_nwouttie_master -cnrcap_nwin_master -cnrcap_nwout_master \
               -incnrcap_nwin_master -incnrcap_nwout_master -tbtie_cpp -tap_prefix \
-              -endcap_prefix} \
-    flags {-no_cell_at_top_bottom -disallow_one_site_gaps}
+              -endcap_prefix } \
+    flags {-no_cell_at_top_bottom -disallow_one_site_gaps -no_checkerboard}
 
   sta::check_argc_eq0 "tapcell" $args
 
@@ -139,6 +139,8 @@ proc tapcell { args } {
     tap::set_endcap_prefix $keys(-endcap_prefix)
   }
 
+  set no_checkerboard [expr [info exists flags(-no_checkerboard)]]
+
   set db [ord::get_db]
 
   set halo_y [ord::microns_to_dbu $halo_y]
@@ -169,7 +171,7 @@ proc tapcell { args } {
     $cnrcap_nwout_master $tap_nwintie_master $tap_nwin2_master \
     $tap_nwin3_master $tap_nwouttie_master $tap_nwout2_master \
     $tap_nwout3_master $incnrcap_nwin_master $incnrcap_nwout_master \
-    $tapcell_master $dist
+    $tapcell_master $dist $no_checkerboard
 }
 
 sta::define_cmd_args "cut_rows" {[-endcap_master endcap_master]\
@@ -356,7 +358,7 @@ sta::define_cmd_args "place_tapcells" {
 proc place_tapcells { args } {
   sta::parse_key_args "place_tapcells" args \
     keys {-master -distance} \
-    flags {}
+    flags {-no_checkerboard}
 
   sta::check_argc_eq0 "place_tapcells" $args
 
@@ -369,9 +371,12 @@ proc place_tapcells { args } {
     set master [tap::find_master $keys(-master)]
   }
 
+  set no_checkerboard [expr [info exists flags(-no_checkerboard)]]
+
   tap::insert_tapcells \
     $master \
-    $dist
+    $dist\
+    $no_checkerboard
 }
 
 namespace eval tap {

@@ -60,7 +60,8 @@
            const char* incnrcap_nwin_master,
            const char* incnrcap_nwout_master,
            odb::dbMaster* tapcell_master,
-           const int dist)
+           const int dist,
+           const bool no_checkerboard)
   {
     Options options;
     options.endcap_master = endcap_master;
@@ -79,6 +80,7 @@
     options.tap_nwout3_master = findMaster(tap_nwout3_master);
     options.incnrcap_nwin_master = findMaster(incnrcap_nwin_master);
     options.incnrcap_nwout_master = findMaster(incnrcap_nwout_master);
+    options.no_checkerboard = no_checkerboard;
     getTapcell()->run(options);
   }
 
@@ -145,12 +147,13 @@
 
   void insert_tapcells(
     odb::dbMaster* master,
-    int distance)
+    int distance,
+    bool no_checkerboard)
   {
     Options options;
     options.dist = distance;
     options.tapcell_master = master;
-  
+    options.no_checkerboard = no_checkerboard;
     getTapcell()->placeTapcells(options);
   }
 
