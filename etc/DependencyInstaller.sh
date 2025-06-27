@@ -1,15 +1,46 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
 
 CMAKE_PACKAGE_ROOT_ARGS=""
 rhelVersion=NONE
+
+ if [ ! -z "${CFLAGS:-}" ]; then
+    echo "CFLAGS: ${CFLAGS}"
+else
+    echo "No additional CFLAGS given"
+    CFLAGS=""
+fi
+
+if [ ! -z "${CXXFLAGS:-}" ]; then
+    echo "CXXFLAGS: ${CXXFLAGS}"
+else
+    echo "No additional CXXFLAGS given"
+    CXXFLAGS=""
+fi
+
+if [ ! -z "${PREFIX:-}" ]; then
+    echo "PREFIX: ${PREFIX}"
+fi
+
+if [ ! -z "${CC:-}" ]; then
+    echo "CC: ${CC}"
+else
+    CC="gcc"
+fi
+
+if [ ! -z "${CXX:-}" ]; then
+    echo "CXX: ${CXX}"
+else
+    CXX="g++"
+fi
+
 
 _versionCompare() {
     local a b IFS=. ; set -f
     printf -v a %08d $1; printf -v b %08d $3
     test $a "$2" $b
 }
+
 
 _equivalenceDeps() {
     yosysVersion=v0.53
@@ -85,13 +116,13 @@ _installCommonDev() {
     if [[ ! -z "${PREFIX}" ]]; then
         mkdir -p "${PREFIX}"
     fi
-
+    echo "prefix is ${PREFIX}"
     # CMake
     cmakePrefix=${PREFIX:-"/usr/local"}
     cmakeBin=${cmakePrefix}/bin/cmake
     if [[ ! -f ${cmakeBin} || -z $(${cmakeBin} --version | grep ${cmakeVersionBig}) ]]; then
         cd "${baseDir}"
-        eval wget https://cmake.org/files/v${cmakeVersionBig}/cmake-${cmakeVersionSmall}-${osName}-${arch}.sh
+        eval wget -nc https://cmake.org/files/v${cmakeVersionBig}/cmake-${cmakeVersionSmall}-${osName}-${arch}.sh
         md5sum -c <(echo "${cmakeChecksum} cmake-${cmakeVersionSmall}-${osName}-${arch}.sh") || exit 1
         chmod +x cmake-${cmakeVersionSmall}-${osName}-${arch}.sh
         ./cmake-${cmakeVersionSmall}-${osName}-${arch}.sh --skip-license --prefix=${cmakePrefix}
@@ -107,11 +138,11 @@ _installCommonDev() {
     fi
     if [ ${bisonInstalledVersion} != ${bisonVersion} ]; then
         cd "${baseDir}"
-        eval wget https://ftp.gnu.org/gnu/bison/bison-${bisonVersion}.tar.gz
+        eval wget -nc https://ftp.gnu.org/gnu/bison/bison-${bisonVersion}.tar.gz
         md5sum -c <(echo "${bisonChecksum} bison-${bisonVersion}.tar.gz") || exit 1
         tar xf bison-${bisonVersion}.tar.gz
         cd bison-${bisonVersion}
-        ./configure --prefix=${bisonPrefix}
+        ./configure --prefix=${bisonPrefix} CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" CC="${CC}" CXX="${CXX}"
         make -j install
         echo "bison ${bisonVersion} installed (from ${bisonInstalledVersion})."
     else
@@ -121,7 +152,7 @@ _installCommonDev() {
 
     # Flex
     flexPrefix=${PREFIX:-"/usr/local"}
-    if [[ ${rhelVersion} == 8 ]] && [ ! -f ${flexPrefix}/bin/flex ]; then
+    if [[ ${rhelVersion} == 9 ]] && [ ! -f ${flexPrefix}/bin/flex ]; then
         cd "${baseDir}"
         eval wget https://github.com/westes/flex/releases/download/v${flexVersion}/flex-${flexVersion}.tar.gz
         md5sum -c <(echo "${flexChecksum} flex-${flexVersion}.tar.gz") || exit 1
@@ -140,7 +171,7 @@ _installCommonDev() {
     if [[ ! -f ${swigBin} || -z $(${swigBin} -version | grep ${swigVersion}) ]]; then
         cd "${baseDir}"
         tarName="v${swigVersion}.tar.gz"
-        eval wget https://github.com/swig/swig/archive/${tarName}
+        eval wget -nc https://github.com/swig/swig/archive/${tarName}
         md5sum -c <(echo "${swigChecksum} ${tarName}") || exit 1
         tar xfz ${tarName}
         cd swig-${tarName%%.tar*} || cd swig-${swigVersion}
@@ -148,12 +179,12 @@ _installCommonDev() {
         # Check if pcre2 is installed
         if [[ -z $(pcre2-config --version) ]]; then
             tarName="pcre2-${pcreVersion}.tar.gz"
-            eval wget https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${pcreVersion}/${tarName}
+            eval wget -nc https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${pcreVersion}/${tarName}
             md5sum -c <(echo "${pcreChecksum} ${tarName}") || exit 1
             ./Tools/pcre-build.sh
         fi
         ./autogen.sh
-        ./configure --prefix=${swigPrefix}
+        ./configure --prefix=${swigPrefix} CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" CC="${CC}" CXX="${CXX}"
         make -j $(nproc)
         make -j $(nproc) install
     else
@@ -161,17 +192,25 @@ _installCommonDev() {
     fi
     CMAKE_PACKAGE_ROOT_ARGS+=" -D SWIG_ROOT=$(realpath $swigPrefix) "
 
-    # boost
+   #boost
     boostPrefix=${PREFIX:-"/usr/local"}
     if [[ -z $(grep "BOOST_LIB_VERSION \"${boostVersionBig//./_}\"" ${boostPrefix}/include/boost/version.hpp 2> /dev/null) ]]; then
         cd "${baseDir}"
         boostVersionUnderscore=${boostVersionSmall//./_}
-        eval wget https://archives.boost.io/release/${boostVersionSmall}/source/boost_${boostVersionUnderscore}.tar.gz
+        eval wget -nc https://archives.boost.io/release/${boostVersionSmall}/source/boost_${boostVersionUnderscore}.tar.gz
         md5sum -c <(echo "${boostChecksum}  boost_${boostVersionUnderscore}.tar.gz") || exit 1
         tar -xf boost_${boostVersionUnderscore}.tar.gz
         cd boost_${boostVersionUnderscore}
-        ./bootstrap.sh --prefix="${boostPrefix}"
-        ./b2 install --with-iostreams --with-test --with-serialization --with-system --with-thread -j $(nproc)
+
+	    echo "using gcc : : ${CXX} ;" > user-config.jam
+        echo "using zlib : : <include>$PREFIX/include <library>$PREFIX/lib ;" >> user-config.jam
+        echo "using bzip2 : : <include>$PREFIX/include <library>$PREFIX/lib ;" >> user-config.jam
+
+        CC=${CC} CXX=${CXX} ./bootstrap.sh --prefix="${boostPrefix}" --with-toolset=gcc
+        OUTPUT="$(printenv)"
+        echo "${OUTPUT}"
+        
+        CC=${CC} CXX=${CXX} ./b2 --prefix="${boostPrefix}" --user-config=user-config.jam toolset=gcc  install --with-iostreams --with-test --with-serialization --with-system --with-thread -j $(nproc) cflags="${CFLAGS}" cxxflags="${CXXFLAGS}" --debug-configuration
     else
         echo "Boost already installed."
     fi
@@ -183,7 +222,7 @@ _installCommonDev() {
         cd "${baseDir}"
         git clone --depth=1 -b ${eigenVersion} https://gitlab.com/libeigen/eigen.git
         cd eigen
-        ${cmakePrefix}/bin/cmake -DCMAKE_INSTALL_PREFIX="${eigenPrefix}" -B build .
+        ${cmakePrefix}/bin/cmake -DCMAKE_INSTALL_PREFIX="${eigenPrefix}" -DCMAKE_CXX_FLAGS="${CXXFLAGS}" -DCMAKE_C_FLAGS="${CFLAGS}" -DCMAKE_C_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX} -DCMAKE_AR=${AR} -DCMAKE_RANLIB=${RANLIB}  -B build .
         ${cmakePrefix}/bin/cmake --build build -j $(nproc) --target install
     else
         echo "Eigen already installed."
@@ -197,7 +236,7 @@ _installCommonDev() {
         git clone --depth=1 -b ${cuddVersion} https://github.com/The-OpenROAD-Project/cudd.git
         cd cudd
         autoreconf
-        ./configure --prefix=${cuddPrefix}
+        ./configure --prefix=${cuddPrefix} CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" CC="${CC}" CXX="${CXX}" 
         make -j $(nproc) install
     else
         echo "Cudd already installed."
@@ -222,14 +261,14 @@ _installCommonDev() {
         cd "${baseDir}"
         git clone --depth=1 -b ${lemonVersion} https://github.com/The-OpenROAD-Project/lemon-graph.git
         cd lemon-graph
-        ${cmakePrefix}/bin/cmake -DCMAKE_INSTALL_PREFIX="${lemonPrefix}" -B build .
+        ${cmakePrefix}/bin/cmake -DCMAKE_INSTALL_PREFIX="${lemonPrefix}" -DCMAKE_CXX_FLAGS="${CXXFLAGS}" -DCMAKE_C_FLAGS="${CFLAGS}" -DCMAKE_C_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX} -DCMAKE_AR=${AR} -DCMAKE_RANLIB=${RANLIB} -B build .
         ${cmakePrefix}/bin/cmake --build build -j $(nproc) --target install
     else
         echo "Lemon already installed."
     fi
     CMAKE_PACKAGE_ROOT_ARGS+=" -D LEMON_ROOT=$(realpath $lemonPrefix) "
 
-    # spdlog
+    # spdlog, building this with lto causes fmt::format undefined reference error due to weird iis gcc setup, linker plugin etc.
     spdlogPrefix=${PREFIX:-"/usr/local"}
     spdlogInstalledVersion="none"
     if [ -d ${spdlogPrefix}/include/spdlog ]; then
@@ -239,7 +278,7 @@ _installCommonDev() {
         cd "${baseDir}"
         git clone --depth=1 -b "v${spdlogVersion}" https://github.com/gabime/spdlog.git
         cd spdlog
-        ${cmakePrefix}/bin/cmake -DCMAKE_INSTALL_PREFIX="${spdlogPrefix}" -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DSPDLOG_BUILD_EXAMPLE=OFF -B build .
+        ${cmakePrefix}/bin/cmake -DCMAKE_INSTALL_PREFIX="${spdlogPrefix}" -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DSPDLOG_BUILD_EXAMPLE=OFF -DCMAKE_CXX_FLAGS="$(printf '%s\n' "${CXXFLAGS//"-flto=auto"/}")" -DCMAKE_C_FLAGS="$(printf '%s\n' "${CFLAGS//"-flto=auto"/}")" -DCMAKE_C_COMPILER="${CC}" -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_AR="${AR}" -DCMAKE_RANLIB="${RANLIB}" -B build .
         ${cmakePrefix}/bin/cmake --build build -j $(nproc) --target install
         echo "spdlog ${spdlogVersion} installed (from ${spdlogInstalledVersion})."
     else
@@ -251,11 +290,11 @@ _installCommonDev() {
     gtestPrefix=${PREFIX:-"/usr/local"}
     if [[ ! -d ${gtestPrefix}/include/gtest ]]; then
         cd "${baseDir}"
-        eval wget https://github.com/google/googletest/archive/refs/tags/v${gtestVersion}.zip
+        eval wget -nc https://github.com/google/googletest/archive/refs/tags/v${gtestVersion}.zip
         md5sum -c <(echo "${gtestChecksum} v${gtestVersion}.zip") || exit 1
         unzip v${gtestVersion}.zip
         cd googletest-${gtestVersion}
-        ${cmakePrefix}/bin/cmake -DCMAKE_INSTALL_PREFIX="${gtestPrefix}" -B build .
+        ${cmakePrefix}/bin/cmake -DCMAKE_INSTALL_PREFIX="${gtestPrefix}" -DCMAKE_CXX_FLAGS="${CXXFLAGS}" -DCMAKE_C_FLAGS="${CFLAGS}" -DCMAKE_C_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX} -DCMAKE_AR=${AR} -DCMAKE_RANLIB=${RANLIB} -B build .
         ${cmakePrefix}/bin/cmake --build build --target install
     else
         echo "gtest already installed."
@@ -274,7 +313,7 @@ _installCommonDev() {
         ninjaBin=${ninjaPrefix}/bin/ninja
         if [[ ! -d ${ninjaBin} ]]; then
             cd "${baseDir}"
-            eval wget -O ninja-linux.zip https://github.com/ninja-build/ninja/releases/download/v${ninjaVersion}/ninja-linux.zip
+            eval wget -nc -O ninja-linux.zip https://github.com/ninja-build/ninja/releases/download/v${ninjaVersion}/ninja-linux.zip
             md5sum -c <(echo "${ninjaCheckSum} ninja-linux.zip") || exit 1
             unzip -o ninja-linux.zip -d ${ninjaPrefix}/bin/
             chmod +x ${ninjaBin}
@@ -310,7 +349,7 @@ _installOrTools() {
 
     # Disable exit on error for 'find' command, as it might return non zero
     set +euo pipefail
-    LIST=($(find /local* /opt* /lib* /usr* /bin* -type f -name "libortools.so*" 2>/dev/null))
+    LIST=($(find ${PREFIX} -type f -name "libortools.so*" 2>/dev/null))
     # Bring back exit on error
     set -euo pipefail
     # Return if right version of or-tools is installed
@@ -323,30 +362,27 @@ _installOrTools() {
     done
 
     orToolsPath=${PREFIX:-"/opt/or-tools"}
-    if [ "$(uname -m)" == "aarch64" ]; then
+    if [ -f ${orToolsPath}/lib64/libortools.so ]; then
         echo "OR-TOOLS NOT FOUND"
-        echo "Installing  OR-Tools for aarch64..."
+        echo "Installing  OR-Tools for amd64..."
         git clone --depth=1 -b "v${orToolsVersionBig}" https://github.com/google/or-tools.git
         cd or-tools
-        ${cmakePrefix}/bin/cmake -S. -Bbuild -DBUILD_DEPS:BOOL=ON -DBUILD_EXAMPLES:BOOL=OFF -DBUILD_SAMPLES:BOOL=OFF -DBUILD_TESTING:BOOL=OFF -DCMAKE_INSTALL_PREFIX=${orToolsPath} -DCMAKE_CXX_FLAGS="-w" -DCMAKE_C_FLAGS="-w"
+        ${cmakePrefix}/bin/cmake -S. -Bbuild -DBUILD_DEPS:BOOL=ON -DBUILD_EXAMPLES:BOOL=OFF -DBUILD_SAMPLES:BOOL=OFF -DBUILD_TESTING:BOOL=OFF -DCMAKE_INSTALL_PREFIX=${orToolsPath} -DCMAKE_CXX_FLAGS="${CXXFLAGS} -w" -DCMAKE_C_FLAGS="${CFLAGS} -w" -DCMAKE_C_COMPILER="${CC}" -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_AR="${AR}" -DCMAKE_RANLIB="${RANLIB}"
         ${cmakePrefix}/bin/cmake --build build --config Release --target install -v -j $(nproc)
-    else
-        if [[ $osVersion == rodete ]]; then
-            osVersion=11
-        fi
-        if [[ $os == ubuntu && $osVersion == 25.04 ]]; then
-            # FIXME make do with or-tools for 24.04 until an official release for 25.04 is available
-            osVersion=24.04
-        fi
-        orToolsFile=or-tools_${arch}_${os}-${osVersion}_cpp_v${orToolsVersionSmall}.tar.gz
-        eval wget https://github.com/google/or-tools/releases/download/v${orToolsVersionBig}/${orToolsFile}
-        if command -v brew &> /dev/null; then
-            orToolsPath="$(brew --prefix or-tools)"
-        fi
-        mkdir -p ${orToolsPath}
-        tar --strip 1 --dir ${orToolsPath} -xf ${orToolsFile}
-        rm -rf ${baseDir}
     fi
+    # else
+    #     if [[ $osVersion == rodete ]]; then
+    #         osVersion=11
+    #     fi
+    #     orToolsFile=or-tools_${arch}_${os}-${osVersion}_cpp_v${orToolsVersionSmall}.tar.gz
+    #     eval wget -nc https://github.com/google/or-tools/releases/download/v${orToolsVersionBig}/${orToolsFile}
+    #     if command -v brew &> /dev/null; then
+    #         orToolsPath="$(brew --prefix or-tools)"
+    #     fi
+    #     mkdir -p ${orToolsPath}
+    #     tar --strip 1 --dir ${orToolsPath} -xf ${orToolsFile}
+    #     rm -rf ${baseDir}
+    # fi
     CMAKE_PACKAGE_ROOT_ARGS+=" -D ortools_ROOT=$(realpath $orToolsPath) "
 }
 
@@ -479,16 +515,13 @@ _installRHELPackages() {
         zlib-devel
 
     if [[ ${rhelVersion} == 8 ]]; then
-        pythonVersion=3.12
         yum install -y \
             gcc-toolset-13 \
-            python${pythonVersion} \
-            python${pythonVersion}-devel \
-            python${pythonVersion}-pip
-        update-alternatives --install /usr/bin/unversioned-python \
-            python $(command -v python${pythonVersion}) 50
-        update-alternatives --install /usr/bin/python3 \
-            python3 $(command -v python${pythonVersion}) 50
+            python3.12 \
+            python3.12-devel \
+            python3.12-pip
+        alternatives --set python $(command -v python3.12)
+        alternatives --set python3 $(command -v python3.12)
     fi
     if [[ ${rhelVersion} == 9 ]]; then
         yum install -y \
@@ -780,7 +813,7 @@ EOF
 }
 
 # Default values
-PREFIX=""
+# PREFIX=""
 option="none"
 isLocal="false"
 equivalenceDeps="no"
@@ -929,15 +962,18 @@ case "${os}" in
             _installOrTools "ubuntu" "${ubuntuVersion}" "amd64"
         fi
         ;;
-    "Red Hat Enterprise Linux" | "Rocky Linux")
+    "Red Hat Enterprise Linux" | "Rocky Linux" | "AlmaLinux")
     if [[ "${os}" == "Red Hat Enterprise Linux" ]]; then
         rhelVersion=$(rpm -q --queryformat '%{VERSION}' redhat-release | cut -d. -f1)
     elif  [[ "${os}" == "Rocky Linux" ]]; then
         rhelVersion=$(rpm -q --queryformat '%{VERSION}' rocky-release | cut -d. -f1)
+    elif  [[ "${os}" == "AlmaLinux" ]]; then
+        rhelVersion=$(rpm -q --queryformat '%{VERSION}' almalinux-release | cut -d. -f1)
+        echo $rhelVersion
     fi
-        if [[ "${rhelVersion}" != "8" ]] && [[ "${rhelVersion}" != "9" ]]; then
-            echo "ERROR: Unsupported ${rhelVersion} version. Versions '8' and '9' are supported."
-            exit 1
+        if [ "${rhelVersion}" != "9" ] || [ "${rhelVersion}" != "8" ]; then
+            echo "ERROR: Unsupported ${rhelVersion} version. Only '9' is supported."
+            # exit 1
         fi
         if [[ ${CI} == "yes" ]]; then
             echo "WARNING: Installing CI dependencies is only supported on Ubuntu 22.04" >&2

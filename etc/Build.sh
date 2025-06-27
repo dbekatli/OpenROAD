@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DIR="$(dirname $(readlink -f $0))"
-cd "$DIR/../"
+# cd "$DIR/../"
 
 # default values, can be overwritten by cmdline args
 buildDir="build"
@@ -141,7 +141,7 @@ if [[ -z "$depsPrefixesFile" ]]; then
 fi
 if [[ -f "$depsPrefixesFile" ]]; then
     cmakeOptions+=" $(cat "$depsPrefixesFile")"
-    echo "[INFO] Using additional CMake parameters from $depsPrefixesFile"
+    echo "[INFO] Using additional CMake parameters $(cat "$depsPrefixesFile") from $depsPrefixesFile"
 else
     echo "[INFO] Auto-generated prefix file does not exist - CMake will choose the dependencies automatically"
 fi
@@ -194,5 +194,5 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 fi
 
 echo "[INFO] Using ${numThreads} threads."
-eval cmake "${cmakeOptions}" -B "${buildDir}" .
-eval time cmake --build "${buildDir}" -j "${numThreads}"
+eval prefix/bin/cmake "${cmakeOptions}" -B "${buildDir}" .
+eval time prefix/bin/cmake --build "${buildDir}" -j "${numThreads}" --verbose
