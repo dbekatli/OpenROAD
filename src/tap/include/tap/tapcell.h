@@ -38,6 +38,7 @@ struct Options
   int halo_x = -1;  // default = 2um
   int halo_y = -1;  // default = 2um
   int row_min_width = -1;
+  bool no_checkerboard = false;
   odb::dbMaster* cnrcap_nwin_master = nullptr;
   odb::dbMaster* cnrcap_nwout_master = nullptr;
   odb::dbMaster* tap_nwintie_master = nullptr;
@@ -174,11 +175,12 @@ class Tapcell
                      int width,
                      const odb::dbOrientType& orient,
                      const std::set<odb::dbInst*>& row_insts);
-  int placeTapcells(odb::dbMaster* tapcell_master, int dist);
+  int placeTapcells(odb::dbMaster* tapcell_master, int dist, const bool no_checkerboard);
   int placeTapcells(odb::dbMaster* tapcell_master,
                     int dist,
                     odb::dbRow* row,
                     bool is_edge,
+                    const bool no_checkerboard,
                     bool disallow_one_site_gaps,
                     const InstTree& fixed_instances);
 
