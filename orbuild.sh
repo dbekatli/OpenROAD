@@ -69,8 +69,8 @@ PGO_USE_FLAGS="-fprofile-use=$(realpath ./pgodata) -fprofile-correction -fprofil
 if [ "$BUILD_TOOLCHAIN" = true ]; then
   CC="gcc-14.2.0" 
   CXX="g++-14.2.0" 
-  AR="gcc-ar" 
-  RANLIB="gcc-ranlib" 
+  AR="gcc-ar-14.2.0" 
+  RANLIB="gcc-ranlib-14.2.0" 
   if [[ ! -f ${PREFIX}/lib/libmpfr.so ]]; then
     mkdir -p prefix/tmp/mpfr
     cd prefix/tmp/mpfr
