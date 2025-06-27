@@ -185,9 +185,6 @@ int Tapcell::placeTapcells(odb::dbMaster* tapcell_master,
     offset = pitch;
   }
 
-  char* orientstr[] = {"R0", "R90", "R180", "R270", "MY", "MYR90", "MX", "MXR90"};
-  std::cout << "is_edge " <<  is_edge << " pitch " << pitch << " offset " <<  offset << " orient " << orientstr[row->getOrient()] << std::endl;
-
   const odb::Rect row_bb = row->getBBox();
   odb::Rect query_box;
   row_bb.bloat(-1, query_box);
