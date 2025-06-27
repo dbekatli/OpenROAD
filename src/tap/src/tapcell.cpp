@@ -91,7 +91,7 @@ void Tapcell::run(const Options& options)
   placeTapcells(options);
 }
 
-int Tapcell::placeTapcells(odb::dbMaster* tapcell_master, const int dist)
+int Tapcell::placeTapcells(odb::dbMaster* tapcell_master, const int dist, const bool no_checkerboard)
 {
   const bool disallow_one_site_gaps = !odb::hasOneSiteMaster(db_);
 
@@ -141,10 +141,11 @@ int Tapcell::placeTapcells(odb::dbMaster* tapcell_master, const int dist)
   int inst = 0;
   for (auto* row : db_->getChip()->getBlock()->getRows()) {
     const bool is_edge = edge_rows.find(row) != edge_rows.end();
-    inst += placeTapcells(tapcell_master,
+        inst += placeTapcells(tapcell_master,
                           dist,
                           row,
                           is_edge,
+                          no_checkerboard,
                           disallow_one_site_gaps,
                           instancetree);
   }
@@ -156,6 +157,7 @@ int Tapcell::placeTapcells(odb::dbMaster* tapcell_master,
                            const int dist,
                            odb::dbRow* row,
                            const bool is_edge,
+                           const bool no_checkerboard,
                            const bool disallow_one_site_gaps,
                            const InstTree& fixed_instances)
 {
@@ -177,11 +179,14 @@ int Tapcell::placeTapcells(odb::dbMaster* tapcell_master,
   int pitch = tap_width
               * std::floor(pitch_mult * dist / static_cast<double>(tap_width));
 
-  if (row->getOrient() == odb::dbOrientType::R0 || is_edge) {
+  if ( (!no_checkerboard && row->getOrient() == odb::dbOrientType::R0) || is_edge) {
     offset = pitch / pitch_mult;
   } else {
     offset = pitch;
   }
+
+  char* orientstr[] = {"R0", "R90", "R180", "R270", "MY", "MYR90", "MX", "MXR90"};
+  std::cout << "is_edge " <<  is_edge << " pitch " << pitch << " offset " <<  offset << " orient " << orientstr[row->getOrient()] << std::endl;
 
   const odb::Rect row_bb = row->getBBox();
   odb::Rect query_box;
@@ -1496,7 +1501,7 @@ void Tapcell::placeTapcells(const Options& options)
 
   const int dist = options.dist >= 0 ? options.dist : defaultDistance();
 
-  placeTapcells(options.tapcell_master, dist);
+  placeTapcells(options.tapcell_master, dist, options.no_checkerboard);
 }
 
 odb::dbBlock* Tapcell::getBlock() const
