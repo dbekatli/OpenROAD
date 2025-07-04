@@ -1,0 +1,5 @@
+#!/bin/bash
+unset LD_LIBRARY_PATH
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+LD_LIBRARY_PATH=${SCRIPT_DIR}/prefix/lib:${SCRIPT_DIR}/prefix/lib64 ${SCRIPT_DIR}/prefix/bin/openroad "$@"
