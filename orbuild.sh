@@ -41,7 +41,7 @@ while true; do
       ;;
   esac
 done
-
+umask 0
 mkdir -p prefix
 mkdir -p pgodata
 
@@ -65,6 +65,7 @@ OR_FLAGS="$DEP_FLAGS $BOOST_FLAGS"
 PGO_GEN_FLAGS="--coverage  -fprofile-generate=$(realpath ./pgodata) "
 PGO_USE_FLAGS="-fprofile-use=$(realpath ./pgodata) -fprofile-correction -fprofile-partial-training"
 
+export LD_LIBRARY_PATH="$PREFIX/lib:$PREFIX/lib64"
 
 if [ "$BUILD_TOOLCHAIN" = true ]; then
   CC="gcc-14.2.0" 
@@ -82,7 +83,7 @@ if [ "$BUILD_TOOLCHAIN" = true ]; then
     make install
   fi
 
-  export LD_LIBRARY_PATH=$PREFIX/lib
+  
   if [[ ! -f ${PREFIX}/lib/libmpc.so ]]; then
     mkdir -p prefix/tmp/mpc
     cd prefix/tmp/mpc
