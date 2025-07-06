@@ -1,0 +1,8 @@
+#!/bin/bash
+unset LD_LIBRARY_PATH
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+if [ -z ${PROFNAME} ]; then
+  PROFNAME=fdodata/OR.data
+fi
+
+LD_LIBRARY_PATH=/usr/scratch/badile16/msc25f8/openroad-dev/prefix/lib:/usr/scratch/badile16/msc25f8/openroad-dev/prefix/lib64 perf record -e cpu/event=0xc4,umask=0x0,name=br_inst_retired.taken/ -a -N -b -c 500009 -o $SCRIPT_DIR/$PROFNAME -- /usr/scratch/badile16/msc25f8/openroad-dev/prefix/bin/openroad "$@"

@@ -59,14 +59,14 @@ BOOST_FLAGS=""
 LTO_FLAGS="-flto=auto"
 
 DEP_FLAGS="$COMMON_FLAGS $LTO_FLAGS" 
-OR_FLAGS="$DEP_FLAGS $BOOST_FLAGS"
+OR_FLAGS="$DEP_FLAGS $LTO_FLAGS"
 # COMMON_FLAGS="-march=native -mtune=native -Og -g -ggdb  -fno-eliminate-unused-debug-symbols -fopenmp -Wno-coverage-mismatch -lboost_iostreams -lboost_thread" 
 # LTO_FLAGS=""
 PGO_GEN_FLAGS="--coverage  -fprofile-generate=$(realpath ./pgodata) "
 PGO_USE_FLAGS="-fprofile-use=$(realpath ./pgodata) -fprofile-correction -fprofile-partial-training"
-
+PGO_USE_FLAGS="-fauto-profile=/scratch/msc25f8/openroad-fdo/fdodata/testdesign.gcov"
 export LD_LIBRARY_PATH="$PREFIX/lib:$PREFIX/lib64"
-
+echo $LD_LIBRARY_PATH
 if [ "$BUILD_TOOLCHAIN" = true ]; then
   CC="gcc-14.2.0" 
   CXX="g++-14.2.0" 
@@ -178,7 +178,7 @@ install_dependencies () {
   install_compressors
   cd $PREFIX
   cd ..
-  AR="$AR" RANLIB="$RANLIB" CC="${CC}" CXX="${CXX}" CFLAGS=${COMMON_FLAGS} CXXFLAGS=${COMMON_FLAGS} source ./etc/DependencyInstaller.sh -common -prefix=$(realpath ./prefix) -constant-build-dir
+  AR="$AR" RANLIB="$RANLIB" CC="${CC}" CXX="${CXX}" CFLAGS=${DEP_FLAGS} CXXFLAGS=${DEP_FLAGS} source ./etc/DependencyInstaller.sh -common -prefix=$(realpath ./prefix) -constant-build-dir
 }
 
 install_OR () {
@@ -216,7 +216,7 @@ if [ "$PGOGEN" = true ]; then
 fi
 
 if [ "$PGOUSE" = true ]; then
-    if [ -z "$( ls -A 'pgodata' )" ]; then 
+    if [ -z "$( ls -A 'fdodata' )" ]; then 
         echo "pgo use option specified but pgodata folder is empty"
         exit 1
     fi
@@ -225,11 +225,11 @@ if [ "$PGOUSE" = true ]; then
     OR_FLAGS="${OR_FLAGS} ${PGO_USE_FLAGS}"
 
     
-    # if [ "$BUILDDEP" = true ]; then
-    #   delete_dependensies
-    #   install_dependencies
-    #   exit
-    # fi
+    if [ "$BUILDDEP" = true ]; then
+       delete_dependensies
+       install_dependencies
+       exit
+     fi
     read -p "will now delete instrumented OR binary, enter to continue, ctrl-c to exit"
     rm -rf build
     install_OR
