@@ -202,7 +202,7 @@ _installCommonDev() {
         tar -xf boost_${boostVersionUnderscore}.tar.gz
         cd boost_${boostVersionUnderscore}
 
-	    echo "using gcc : : ${CXX} ;" > user-config.jam
+	    echo "using gcc : : ${CXX} : <archiver>${AR} <ranlib>  ${RANLIB} ;" > user-config.jam
         echo "using zlib : : <include>$PREFIX/include <library>$PREFIX/lib ;" >> user-config.jam
         echo "using bzip2 : : <include>$PREFIX/include <library>$PREFIX/lib ;" >> user-config.jam
 
