@@ -53,7 +53,7 @@ _equivalenceDeps() {
         cd yosys
         # use of no-register flag is required for some compilers,
         # e.g., gcc and clang from RHEL8
-        make -j $(nproc) PREFIX="${yosysPrefix}" ABC_ARCHFLAGS=-Wno-register
+        make -j ${numThreads} PREFIX="${yosysPrefix}" ABC_ARCHFLAGS=-Wno-register
         make install
     ) fi
 
@@ -64,7 +64,7 @@ _equivalenceDeps() {
         git clone --depth=1 -b "${yosysVersion}" https://github.com/YosysHQ/eqy
         cd eqy
         export PATH="${yosysPrefix}/bin:${PATH}"
-        make -j $(nproc) PREFIX="${eqyPrefix}"
+        make -j ${numThreads} PREFIX="${eqyPrefix}"
         make install PREFIX="${eqyPrefix}"
     )
     fi
@@ -76,7 +76,7 @@ _equivalenceDeps() {
         git clone --depth=1 -b "${yosysVersion}" --recursive https://github.com/YosysHQ/sby
         cd sby
         export PATH="${eqyPrefix}/bin:${PATH}"
-        make -j $(nproc) PREFIX="${sbyPrefix}" install
+        make -j ${numThreads} PREFIX="${sbyPrefix}" install
     )
     fi
 }
@@ -95,8 +95,8 @@ _installCommonDev() {
     cmakeVersionSmall=${cmakeVersionBig}.6
     pcreVersion=10.42
     pcreChecksum="37d2f77cfd411a3ddf1c64e1d72e43f7"
-    swigVersion=4.1.0
-    swigChecksum="794433378154eb61270a3ac127d9c5f3"
+    swigVersion=4.3.0
+    swigChecksum="9f74c7f402aa28d9f75e67d1990ee6fb"
     boostVersionBig=1.86
     boostVersionSmall=${boostVersionBig}.0
     boostChecksum="ac857d73bb754b718a039830b07b9624"
@@ -159,8 +159,8 @@ _installCommonDev() {
         tar xf flex-${flexVersion}.tar.gz
         cd flex-${flexVersion}
         ./configure --prefix=${flexPrefix}
-        make -j $(nproc)
-        make -j $(nproc) install
+        make -j ${numThreads}
+        make -j ${numThreads} install
     else
         echo "Flex already installed."
     fi
@@ -623,16 +623,13 @@ Then, rerun this script.
 EOF
         exit 1
     fi
-    brew install bison boost cmake eigen flex fmt groff libomp or-tools pandoc pyqt5 python spdlog tcl-tk zlib
+    brew install bison boost cmake eigen flex fmt groff libomp or-tools pandoc pyqt5 python spdlog tcl-tk zlib swig
 
     # Some systems need this to correctly find OpenMP package during build
     brew link --force libomp
 
     # Lemon is not in the homebrew-core repo
     brew install The-OpenROAD-Project/lemon-graph/lemon-graph
-
-    # Install swig 4.1.1
-    _installHomebrewPackage "swig" "c83c8aaa6505c3ea28c35bc45a54234f79e46c5d" "s/"
 }
 
 _installDebianCleanUp() {
@@ -724,7 +721,7 @@ _installCI() {
 
     curl -Lo bazelisk https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
     chmod +x bazelisk
-    mv bazelisk /usr/local/bin/bazel
+    mv bazelisk /usr/local/bin/bazelisk
 
     if command -v docker &> /dev/null; then
         # The user can uninstall docker if they want to reinstall it,
@@ -810,6 +807,9 @@ Usage: $0 -all
        $0 -constant-build-dir
                                 # Use constant build directory, instead of
                                 #    random one.
+       $0 -threads=<N>          #
+                                # Limit number of compiling threads. Default is
+                                # all available numThreads.
 
 EOF
     exit "${1:-1}"
@@ -822,6 +822,7 @@ isLocal="false"
 equivalenceDeps="no"
 CI="no"
 saveDepsPrefixes=""
+numThreads=$(nproc)
 # temp dir to download and compile
 baseDir=$(mktemp -d /tmp/DependencyInstaller-XXXXXX)
 
@@ -897,6 +898,9 @@ while [ "$#" -gt 0 ]; do
             ;;
         -save-deps-prefixes=*)
             saveDepsPrefixes=$(realpath ${1#-save-deps-prefixes=})
+            ;;
+        -threads=*)
+            numThreads=${1}
             ;;
         *)
             echo "unknown option: ${1}" >&2
