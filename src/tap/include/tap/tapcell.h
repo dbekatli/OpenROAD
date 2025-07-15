@@ -48,6 +48,7 @@ struct Options
   odb::dbMaster* tap_nwout3_master = nullptr;
   odb::dbMaster* incnrcap_nwin_master = nullptr;
   odb::dbMaster* incnrcap_nwout_master = nullptr;
+  bool no_checkerboard = false;
 
   bool addBoundaryCells() const
   {
@@ -174,11 +175,12 @@ class Tapcell
                      int width,
                      const odb::dbOrientType& orient,
                      const std::set<odb::dbInst*>& row_insts);
-  int placeTapcells(odb::dbMaster* tapcell_master, int dist);
+  int placeTapcells(odb::dbMaster* tapcell_master, int dist,  const bool no_checkerboard);
   int placeTapcells(odb::dbMaster* tapcell_master,
                     int dist,
                     odb::dbRow* row,
                     bool is_edge,
+                    const bool no_checkerboard,
                     bool disallow_one_site_gaps,
                     const InstTree& fixed_instances);
 
