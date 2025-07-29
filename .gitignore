@@ -63,3 +63,4 @@ bazel-OpenROAD
 projectview.bazelproject
 .bsp/
 .bazelbsp/
+prefix
