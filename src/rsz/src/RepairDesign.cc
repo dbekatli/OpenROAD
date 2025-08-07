@@ -886,7 +886,7 @@ void RepairDesign::repairNet(Net* net,
     // TO BE REMOVED: Resize the driver to normalize slews before repairing
     // limit violations.
     if (parasitics_src_ == ParasiticsSrc::placement && resize_drvr) {
-      resize_count_ += resizer_->resizeToCapRatio(drvr_pin, false);
+      //resize_count_ += resizer_->resizeToCapRatio(drvr_pin, false);
     }
 
     float max_cap = INF;
