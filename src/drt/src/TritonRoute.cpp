@@ -4,12 +4,12 @@
 #include "triton_route/TritonRoute.h"
 
 #include <algorithm>
-#include <boost/asio/post.hpp>
-#include <boost/bind/bind.hpp>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <string>
 #include <thread>
@@ -18,6 +18,10 @@
 
 #include "AbstractGraphicsFactory.h"
 #include "DesignCallBack.h"
+#include "PACallBack.h"
+#include "boost/asio/post.hpp"
+#include "boost/bind/bind.hpp"
+#include "boost/geometry/geometry.hpp"
 #include "db/tech/frTechObject.h"
 #include "distributed/PinAccessJobDescription.h"
 #include "distributed/RoutingCallBack.h"
@@ -41,6 +45,7 @@
 #include "stt/SteinerTreeBuilder.h"
 #include "ta/AbstractTAGraphics.h"
 #include "ta/FlexTA.h"
+#include "utl/CallBackHandler.h"
 #include "utl/ScopedTemporaryFile.h"
 
 namespace drt {
@@ -48,6 +53,7 @@ namespace drt {
 TritonRoute::TritonRoute()
     : debug_(std::make_unique<frDebugSettings>()),
       db_callback_(std::make_unique<DesignCallBack>(this)),
+      pa_callback_(std::make_unique<PACallBack>(this)),
       router_cfg_(std::make_unique<RouterConfiguration>())
 {
   if (distributed_) {
@@ -526,6 +532,7 @@ void TritonRoute::applyUpdates(
 void TritonRoute::init(
     odb::dbDatabase* db,
     Logger* logger,
+    utl::CallBackHandler* callback_handler,
     dst::Distributed* dist,
     stt::SteinerTreeBuilder* stt_builder,
     std::unique_ptr<AbstractGraphicsFactory> graphics_factory)
@@ -537,6 +544,7 @@ void TritonRoute::init(
   design_ = std::make_unique<frDesign>(logger_, router_cfg_.get());
   dist->addCallBack(new RoutingCallBack(this, dist, logger));
   graphics_factory_ = std::move(graphics_factory);
+  pa_callback_->setOwner(callback_handler);
 }
 
 bool TritonRoute::initGuide()

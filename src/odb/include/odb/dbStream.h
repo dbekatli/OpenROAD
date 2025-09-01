@@ -3,9 +3,11 @@
 
 #pragma once
 
+#include <string.h>
+
 #include <array>
-#include <boost/container/flat_map.hpp>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <istream>
 #include <map>
@@ -18,6 +20,7 @@
 #include <vector>
 
 #include "ZException.h"
+#include "boost/container/flat_map.hpp"
 #include "dbObject.h"
 #include "odb.h"
 
@@ -138,12 +141,6 @@ class dbOStream
       _f.write(c, l);
     }
 
-    return *this;
-  }
-
-  dbOStream& operator<<(dbObjectType c)
-  {
-    writeValueAsBytes(c);
     return *this;
   }
 
@@ -372,12 +369,6 @@ class dbIStream
       _f.read(c, l);
     }
 
-    return *this;
-  }
-
-  dbIStream& operator>>(dbObjectType& c)
-  {
-    _f.read(reinterpret_cast<char*>(&c), sizeof(c));
     return *this;
   }
 

@@ -3,8 +3,7 @@
 
 #pragma once
 
-#include <boost/geometry.hpp>
-#include <boost/geometry/index/rtree.hpp>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -16,6 +15,8 @@
 #include <utility>  // pair
 #include <vector>
 
+#include "boost/geometry/geometry.hpp"
+#include "boost/geometry/index/rtree.hpp"
 #include "odb/db.h"
 
 namespace utl {
@@ -284,7 +285,6 @@ class Opendp
   void placeRowFillers(GridY row,
                        const std::string& prefix,
                        const MasterByImplant& filler_masters);
-  std::pair<odb::dbSite*, odb::dbOrientType> fillSite(Pixel* pixel);
   static bool isFiller(odb::dbInst* db_inst);
   bool isOneSiteCell(odb::dbMaster* db_master) const;
   const char* gridInstName(GridY row, GridX col);

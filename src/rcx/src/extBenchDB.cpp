@@ -1,8 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2019-2025, The OpenROAD Authors
 
+#include <string.h>
+
 #include <cfloat>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
 #include <map>
+#include <memory>
 #include <vector>
 
 #include "odb/db.h"
@@ -430,8 +436,8 @@ uint extMain::benchVerilog_assign(FILE* fp)
 }
 uint extRCModel::benchDB_WS(extMainOptions* opt, extMeasure* measure)
 {
-  Ath__array1D<double>* widthTable = new Ath__array1D<double>(4);
-  Ath__array1D<double>* spaceTable = new Ath__array1D<double>(4);
+  auto widthTable = std::make_unique<Ath__array1D<double>>(4);
+  auto spaceTable = std::make_unique<Ath__array1D<double>>(4);
   Ath__array1D<double>* wTable = &opt->_widthTable;
   Ath__array1D<double>* sTable = &opt->_spaceTable;
   Ath__array1D<double>* gTable = &opt->_gridTable;

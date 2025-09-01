@@ -49,6 +49,9 @@ COMPULSORY_TESTS = [
     "core_grid_with_fixed_pins",
     "core_grid_with_rings",
     "core_grid_with_rings_connect",
+    "core_grid_with_rings_different_offset",
+    "core_grid_with_rings_different_width1",
+    "core_grid_with_rings_different_width2",
     "core_grid_with_rings_outside_die",
     "core_grid_with_rings_outside_die_allowed",
     "core_grid_with_rings_with_limit_straps",
@@ -240,7 +243,7 @@ filegroup(
         "sky130hd/sky130hd_vt.tlef",
         "sky130hd/work_around_yosys/formal_pdk.v",
         "sky130hvl/sky130_fd_sc_hvl.tlef",
-        "sky130hvl/sky130_fd_sc_hvl_merged.lef"
+        "sky130hvl/sky130_fd_sc_hvl_merged.lef",
     ],
 )
 
