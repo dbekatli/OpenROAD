@@ -12,6 +12,7 @@
 #include <optional>
 #include <set>
 #include <variant>
+#include <vector>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QDesktopWidget>
 #endif
@@ -27,12 +28,8 @@
 #include <QUrl>
 #include <QWidgetAction>
 #include <cmath>
-#include <iomanip>
-#include <map>
-#include <sstream>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "GUIProgress.h"
 #include "browserWidget.h"
@@ -49,6 +46,8 @@
 #include "inspector.h"
 #include "layoutTabs.h"
 #include "layoutViewer.h"
+#include "odb/db.h"
+#include "odb/dbObject.h"
 #include "scriptWidget.h"
 #include "selectHighlightWindow.h"
 #include "sta/Liberty.hh"
@@ -1646,6 +1645,7 @@ void MainWindow::setLogger(utl::Logger* logger)
   drc_viewer_->setLogger(logger);
   clock_viewer_->setLogger(logger);
   charts_widget_->setLogger(logger);
+  timing_widget_->setLogger(logger);
 }
 
 void MainWindow::fit()
@@ -1695,6 +1695,12 @@ void MainWindow::closeEvent(QCloseEvent* event)
   exit_check.exec();
 
   if (exit_check.clickedButton() == exit_button) {
+    // close all dialogs
+    for (QWidget* w : QApplication::topLevelWidgets()) {
+      if (w != this) {
+        w->close();
+      }
+    }
     // exit selected so go ahead and close
     event->accept();
   } else if (exit_check.clickedButton() == hide_button) {

@@ -7,7 +7,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <limits>
 #include <memory>
 #include <string>
@@ -18,6 +17,7 @@
 #include "grt/Rudy.h"
 #include "nesterovBase.h"
 #include "odb/db.h"
+#include "odb/dbTypes.h"
 #include "utl/Logger.h"
 
 using odb::dbBlock;

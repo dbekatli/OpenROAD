@@ -3,13 +3,11 @@
 
 #include "ir_solver.h"
 
-#include <Eigen/SparseLU>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <fstream>
 #include <iterator>
-#include <list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -26,7 +24,10 @@
 #include "est/EstimateParasitics.h"
 #include "ir_network.h"
 #include "node.h"
+#include "odb/db.h"
 #include "odb/dbShape.h"
+#include "odb/dbTypes.h"
+#include "odb/geom.h"
 #include "shape.h"
 #include "sta/Corner.hh"
 #include "sta/DcalcAnalysisPt.hh"

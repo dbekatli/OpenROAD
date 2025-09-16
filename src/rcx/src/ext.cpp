@@ -4,10 +4,11 @@
 #include "rcx/ext.h"
 
 #include <cstdio>
-#include <functional>
 #include <list>
 #include <string>
 
+#include "odb/db.h"
+#include "odb/dbObject.h"
 #include "odb/wOrder.h"
 #include "parse.h"
 #include "rcx/extMeasureRC.h"

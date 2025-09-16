@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
-#include <iostream>
 #include <limits>
 #include <memory>
 #include <set>
@@ -18,6 +17,8 @@
 
 #include "Utils.hh"
 #include "db_sta/dbNetwork.hh"
+#include "odb/db.h"
+#include "odb/dbTypes.h"
 #include "sta/EquivCells.hh"
 #include "sta/FuncExpr.hh"
 #include "sta/Liberty.hh"

@@ -20,13 +20,16 @@
 #include "odb/db.h"
 #include "odb/dbExtControl.h"
 #include "odb/dbShape.h"
+#include "odb/dbTypes.h"
+#include "odb/dbWireCodec.h"
+#include "odb/geom.h"
 #include "odb/odb.h"
 #include "odb/util.h"
 #include "rcx/dbUtil.h"
 #include "rcx/extPattern.h"
 #include "rcx/extSolverGen.h"
 #include "rcx/ext_options.h"
-#include "util.h"
+#include "rcx/util.h"
 
 namespace utl {
 class Logger;

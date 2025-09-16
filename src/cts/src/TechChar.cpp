@@ -9,9 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
-#include <fstream>
 #include <functional>
-#include <iomanip>
 #include <iterator>
 #include <limits>
 #include <ostream>
@@ -21,6 +19,8 @@
 #include <vector>
 
 #include "db_sta/dbSta.hh"
+#include "odb/db.h"
+#include "odb/dbSet.h"
 #include "rsz/Resizer.hh"
 #include "sta/Graph.hh"
 #include "sta/Liberty.hh"

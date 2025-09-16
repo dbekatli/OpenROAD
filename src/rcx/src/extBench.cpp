@@ -4,9 +4,9 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
-#include <map>
-#include <vector>
 
+#include "odb/db.h"
+#include "odb/geom.h"
 #include "rcx/extRCap.h"
 #include "rcx/extSpef.h"
 #include "rcx/extprocess.h"
@@ -480,9 +480,9 @@ uint extMain::benchWires(extMainOptions* opt)
   opt->_tech = _tech;
 
   if (_block == nullptr) {
-    dbChip* chip = dbChip::create(_db);
+    dbChip* chip = dbChip::create(_db, _tech);
     assert(chip);
-    _block = dbBlock::create(chip, opt->_name, _tech, '/');
+    _block = dbBlock::create(chip, opt->_name, '/');
     assert(_block);
     _prevControl = _block->getExtControl();
     _block->setBusDelimiters('[', ']');

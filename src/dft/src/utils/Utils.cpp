@@ -3,7 +3,6 @@
 
 #include "Utils.hh"
 
-#include <iostream>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -11,7 +10,9 @@
 #include <vector>
 
 #include "db_sta/dbNetwork.hh"
+#include "odb/db.h"
 #include "odb/dbTransform.h"
+#include "odb/dbTypes.h"
 
 namespace dft::utils {
 

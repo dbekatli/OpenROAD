@@ -3,11 +3,14 @@
 
 #include <cmath>
 #include <cstdio>
-#include <map>
 #include <memory>
 #include <vector>
 
 #include "gseq.h"
+#include "odb/db.h"
+#include "odb/dbShape.h"
+#include "odb/dbTypes.h"
+#include "odb/geom.h"
 #include "rcx/dbUtil.h"
 #include "rcx/extRCap.h"
 #include "rcx/grids.h"

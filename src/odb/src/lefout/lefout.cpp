@@ -5,7 +5,6 @@
 
 #include <spdlog/fmt/ostr.h>
 
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
@@ -16,8 +15,12 @@
 
 #include "boost/polygon/polygon.hpp"
 #include "odb/db.h"
+#include "odb/dbObject.h"
+#include "odb/dbSet.h"
 #include "odb/dbShape.h"
 #include "odb/dbTransform.h"
+#include "odb/dbTypes.h"
+#include "odb/geom.h"
 #include "utl/scope.h"
 
 using namespace boost::polygon::operators;

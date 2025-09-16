@@ -33,6 +33,25 @@ class Graph2D
     double cap_ndr;  // capacity available for NDR
   };
 
+  struct NDRCongestion
+  {
+    int net_id;          // NDR net id
+    uint16_t num_edges;  // number of congested edges
+
+    NDRCongestion(int net_id, uint16_t num_edges)
+        : net_id(net_id), num_edges(num_edges)
+    {
+    }
+  };
+
+  struct NDRCongestionComparator
+  {
+    bool operator()(const NDRCongestion& a, const NDRCongestion& b) const
+    {
+      return a.num_edges > b.num_edges;
+    }
+  };
+
   void init(int x_grid,
             int y_grid,
             int h_capacity,
@@ -65,11 +84,7 @@ class Graph2D
 
   void addCapH(int x, int y, int cap);
   void addCapV(int x, int y, int cap);
-  void addEstUsageH(const Interval& xi, int y, double usage);
-  void addEstUsageH(int x, int y, double usage);
   void addEstUsageToUsage();
-  void addEstUsageV(int x, const Interval& yi, double usage);
-  void addEstUsageV(int x, int y, double usage);
   void addRedH(int x, int y, int red);
   void addRedV(int x, int y, int red);
   void addUsageH(const Interval& xi, int y, int used);
@@ -82,6 +97,11 @@ class Graph2D
                                bool stop_decreasing,
                                int& max_adj);
   void str_accu(int rnd);
+  void saveResources(int x, int y, bool is_horizontal);
+  bool computeSuggestedAdjustment(int x,
+                                  int y,
+                                  bool is_horizontal,
+                                  int& adjustment);
 
   void updateEstUsageH(const Interval& xi, int y, FrNet* net, double usage);
   void updateEstUsageH(int x, int y, FrNet* net, double usage);
@@ -99,6 +119,12 @@ class Graph2D
                    double cap);
 
   void clearNDRnets();
+  std::vector<NDRCongestion> getCongestedNDRnets() { return congested_ndrs_; };
+  void clearCongestedNDRnets() { congested_ndrs_.clear(); };
+  void addCongestedNDRnet(int net_id, uint16_t num_edges);
+  void sortCongestedNDRnets();
+  int getOneCongestedNDRnet();
+  std::vector<int> getMultipleCongestedNDRnet();
 
  private:
   int x_grid_;
@@ -129,10 +155,11 @@ class Graph2D
   multi_array<Edge, 2> h_edges_;    // The way it is indexed is (X, Y)
   multi_array<Cap3D, 3> v_cap_3D_;  // The way it is indexed is (Layer, X, Y)
   multi_array<Cap3D, 3> h_cap_3D_;  // The way it is indexed is (Layer, X, Y)
-  multi_array<std::set<std::string>, 2>
+  multi_array<std::set<FrNet*>, 2>
       v_ndr_nets_;  // The way it is indexed is (X, Y)
-  multi_array<std::set<std::string>, 2>
+  multi_array<std::set<FrNet*>, 2>
       h_ndr_nets_;  // The way it is indexed is (X, Y)
+  std::vector<NDRCongestion> congested_ndrs_;
 
   utl::Logger* logger_;
 

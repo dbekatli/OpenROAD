@@ -40,6 +40,8 @@
 #include "boost/functional/hash.hpp"
 #include "boost/multi_array.hpp"
 #include "db_sta/dbNetwork.hh"
+#include "odb/db.h"
+#include "odb/dbTypes.h"
 #include "sta/ArcDelayCalc.hh"
 #include "sta/Bfs.hh"
 #include "sta/Corner.hh"
@@ -1317,7 +1319,7 @@ bool Resizer::hasTristateOrDontTouchDriver(const Net* net)
   return false;
 }
 
-bool Resizer::isTristateDriver(const Pin* pin)
+bool Resizer::isTristateDriver(const Pin* pin) const
 {
   // Note LEF macro PINs do not have a clue about tristates.
   LibertyPort* port = network_->libertyPort(pin);
@@ -2941,7 +2943,7 @@ void Resizer::setDontTouch(const Instance* inst, bool dont_touch)
   db_inst->setDoNotTouch(dont_touch);
 }
 
-bool Resizer::dontTouch(const Instance* inst)
+bool Resizer::dontTouch(const Instance* inst) const
 {
   dbInst* db_inst = db_network_->staToDb(inst);
   if (!db_inst) {
@@ -2956,7 +2958,7 @@ void Resizer::setDontTouch(const Net* net, bool dont_touch)
   db_net->setDoNotTouch(dont_touch);
 }
 
-bool Resizer::dontTouch(const Net* net)
+bool Resizer::dontTouch(const Net* net) const
 {
   odb::dbNet* db_net = nullptr;
   odb::dbModNet* db_mod_net = nullptr;
@@ -2967,7 +2969,7 @@ bool Resizer::dontTouch(const Net* net)
   return db_net->isDoNotTouch();
 }
 
-bool Resizer::dontTouch(const Pin* pin)
+bool Resizer::dontTouch(const Pin* pin) const
 {
   return dontTouch(network_->instance(pin)) || dontTouch(network_->net(pin));
 }
@@ -3862,8 +3864,7 @@ double Resizer::findMaxWireLength(LibertyPort* drvr_port, const Corner* corner)
     logger_->error(RSZ, 70, "no LEF cell for {}.", cell->name());
   }
   // Make a (hierarchical) block to use as a scratchpad.
-  dbBlock* block
-      = dbBlock::create(block_, "wire_delay", block_->getTech(), '/');
+  dbBlock* block = dbBlock::create(block_, "wire_delay", '/');
   std::unique_ptr<dbSta> sta = sta_->makeBlockSta(block);
 
   const double drvr_r = drvr_port->driveResistance();
@@ -3917,8 +3918,7 @@ void Resizer::bufferWireDelay(LibertyCell* buffer_cell,
                               Slew& slew)
 {
   // Make a (hierarchical) block to use as a scratchpad.
-  dbBlock* block
-      = dbBlock::create(block_, "wire_delay", block_->getTech(), '/');
+  dbBlock* block = dbBlock::create(block_, "wire_delay", '/');
   std::unique_ptr<dbSta> sta = sta_->makeBlockSta(block);
   bufferWireDelay(buffer_cell, wire_length, sta, delay, slew);
   dbBlock::destroy(block);
@@ -4990,6 +4990,31 @@ std::vector<rsz::MoveType> Resizer::parseMoveSequence(
     result.push_back(parseMove(item));
   }
   return result;
+}
+
+bool Resizer::okToBufferNet(const Pin* driver_pin) const
+{
+  if (isTristateDriver(driver_pin)) {
+    return false;
+  }
+
+  const Net* net = db_network_->dbToSta(db_network_->flatNet(driver_pin));
+
+  if (!net) {
+    return false;
+  }
+
+  if (dontTouch(net)) {
+    return false;
+  }
+
+  dbNet* db_net = db_network_->staToDb(net);
+
+  if (db_net->isConnectedByAbutment() || db_net->isSpecial()) {
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace rsz

@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <fstream>
 #include <limits>
 #include <ostream>
 #include <queue>
@@ -12,7 +11,6 @@
 #include <set>
 #include <string>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #include "DataType.h"
@@ -20,6 +18,7 @@
 #include "db_sta/dbNetwork.hh"
 #include "db_sta/dbSta.hh"
 #include "odb/db.h"
+#include "odb/geom.h"
 #include "utl/CallBackHandler.h"
 #include "utl/Logger.h"
 #include "utl/algorithms.h"

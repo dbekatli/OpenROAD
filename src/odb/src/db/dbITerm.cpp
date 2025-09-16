@@ -16,6 +16,7 @@
 #include "dbBlock.h"
 #include "dbChip.h"
 #include "dbCommon.h"
+#include "dbCore.h"
 #include "dbDatabase.h"
 #include "dbHier.h"
 #include "dbInst.h"
@@ -32,6 +33,7 @@
 #include "odb/db.h"
 #include "odb/dbBlockCallBackObj.h"
 #include "odb/dbShape.h"
+#include "odb/geom.h"
 #include "utl/Logger.h"
 namespace odb {
 
@@ -403,7 +405,7 @@ void dbITerm::connect(dbModNet* mod_net)
   // accidentally blow away prior flat net connections)
 
   if (iterm->_mnet != 0) {
-    disconnectModNet();
+    disconnectDbModNet();
   }
 
   iterm->_mnet = _mod_net->getId();
@@ -623,7 +625,7 @@ void dbITerm::disconnectDbNet()
 //
 // Disconnect the mod net and allow journaling
 //
-void dbITerm::disconnectModNet()
+void dbITerm::disconnectDbModNet()
 {
   _dbITerm* iterm = (_dbITerm*) this;
   _dbBlock* block = (_dbBlock*) iterm->getOwner();
@@ -789,6 +791,11 @@ void dbITerm::setAccessPoint(dbMPin* pin, dbAccessPoint* ap)
     _ap->iterms_.push_back(iterm->getOID());
   } else {
     iterm->aps_[pin->getImpl()->getOID()] = dbId<_dbAccessPoint>();
+  }
+
+  _dbBlock* block = (_dbBlock*) iterm->getOwner();
+  for (auto callback : block->_callbacks) {
+    callback->inDbITermPostSetAccessPoints(this);
   }
 }
 

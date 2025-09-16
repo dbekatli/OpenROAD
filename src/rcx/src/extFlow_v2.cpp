@@ -6,10 +6,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <map>
 #include <vector>
 
 #include "gseq.h"
+#include "odb/db.h"
+#include "odb/dbSet.h"
+#include "odb/dbShape.h"
 #include "parse.h"
 #include "rcx/dbUtil.h"
 #include "rcx/extMeasureRC.h"
