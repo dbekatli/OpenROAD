@@ -37,6 +37,7 @@ class HardMacro;
 class SoftMacro;
 class Cluster;
 
+using ConnectionsMap = std::map<int, float>;
 using IntervalList = std::vector<Interval>;
 using TilingList = std::vector<Tiling>;
 using TilingSet = std::set<Tiling>;
@@ -208,10 +209,9 @@ class Cluster
 
   // Connection signature support
   void initConnection();
-  void addConnection(int cluster_id, float weight);
-  // TODO: this should return a const reference iff callers don't implicitly
-  // modify it. See comment in Cluster.
-  std::map<int, float> getConnection() const;
+  void addConnection(Cluster* cluster, float connection_weight);
+  void removeConnection(int cluster_id);
+  const ConnectionsMap& getConnectionsMap() const;
   bool isSameConnSignature(const Cluster& cluster, float net_threshold);
   bool hasMacroConnectionWith(const Cluster& cluster, float net_threshold);
   int getCloseCluster(const std::vector<int>& candidate_clusters,
@@ -222,15 +222,15 @@ class Cluster
   std::vector<std::pair<int, int>> getVirtualConnections() const;
   void addVirtualConnection(int src, int target);
 
-  // Print Basic Information
-  void printBasicInformation(utl::Logger* logger) const;
-
   // Macro Placement Support
   void setSoftMacro(std::unique_ptr<SoftMacro> soft_macro);
   SoftMacro* getSoftMacro() const;
 
   void setTilings(const TilingList& tilings);
   const TilingList& getTilings() const;
+
+  // For Debug
+  void reportConnections() const;
 
  private:
   int id_{-1};
@@ -255,7 +255,7 @@ class Cluster
   Cluster* parent_{nullptr};
   UniqueClusterVector children_;
 
-  std::map<int, float> connection_map_;  // id -> connection weight
+  ConnectionsMap connections_map_;  // cluster id -> connection weight
   std::vector<std::pair<int, int>> virtual_connections_;  // id -> id
 
   utl::Logger* logger_;
@@ -489,18 +489,11 @@ class SoftMacro
   bool align_flag_ = false;
 };
 
-// In our netlist model, we only have two-pin nets
 struct BundledNet
 {
   BundledNet(int src, int target, float weight)
   {
     this->terminals = std::pair<int, int>(src, target);
-    this->weight = weight;
-  }
-
-  BundledNet(const std::pair<int, int>& terminals, float weight)
-  {
-    this->terminals = terminals;
     this->weight = weight;
   }
 
@@ -512,11 +505,6 @@ struct BundledNet
 
   std::pair<int, int> terminals;  // source_id <--> target_id (undirected)
   float weight;  // Number of bundled connections (can be timing-related)
-
-  // In our framework, we only bundled connections between clusters.
-  // Thus each net must have both src_cluster_id and target_cluster_id
-  int src_cluster_id = -1;
-  int target_cluster_id = -1;
 };
 
 struct SequencePair

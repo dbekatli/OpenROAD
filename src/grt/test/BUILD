@@ -1,9 +1,12 @@
 load("//test:regression.bzl", "regression_test")
 
+package(features = ["layering_check"])
+
 TESTS = [
     "bus_route",
     "clock_route",
     "clock_route_cugr",
+    "clock_route_cugr2",
     "clock_route_alpha",
     "clock_route_error1",
     "clock_route_error2",
@@ -15,11 +18,15 @@ TESTS = [
     "congestion6",
     "congestion7",
     "critical_nets_percentage",
+    "cugr_adjustment1",
+    "cugr_adjustment2",
+    "cugr_adjustment3",
     "est_rc1",
     "est_rc2",
     "est_rc3",
     "est_rc4",
     "gcd",
+    "gcd_cugr",
     "gcd_flute",
     "inst_pin_out_of_die",
     "invalid_pin_placement",
@@ -71,6 +78,7 @@ TESTS = [
     "set_nets_to_route1",
     "silence",
     "single_row",
+    "soft_ndr_4w_6s",
     "top_level_term1",
     "top_level_term2",
     "top_level_term3",
@@ -101,7 +109,16 @@ filegroup(
     ),
 )
 
+# TODO: Enable once difference between bazel and ctest is resolved.
+MANUAL_FOR_BAZEL_TESTS = [
+    "cugr_adjustment1",
+    "cugr_adjustment2",
+    "cugr_adjustment3",
+    "gcd_cugr",
+]
+
 [regression_test(
     name = test_name,
     data = [":test_resources"],
+    tags = ["manual"] if test_name in MANUAL_FOR_BAZEL_TESTS else [],
 ) for test_name in TESTS]

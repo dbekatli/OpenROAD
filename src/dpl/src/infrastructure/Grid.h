@@ -17,10 +17,12 @@
 #include "boost/icl/interval_map.hpp"
 #include "dpl/Opendp.h"
 #include "odb/db.h"
+#include "odb/dbTypes.h"
+#include "odb/geom.h"
+#include "odb/isotropy.h"
 
 namespace dpl {
 
-using odb::dbOrientType;
 using odb::dbSite;
 
 struct GridIntervalX
@@ -66,14 +68,14 @@ class Grid
 {
  public:
   void init(Logger* logger) { logger_ = logger; }
-  void setCore(const Rect& core) { core_ = core; }
+  void setCore(const odb::Rect& core) { core_ = core; }
   void initGrid(dbDatabase* db,
-                dbBlock* block,
+                odb::dbBlock* block,
                 std::shared_ptr<Padding> padding,
                 int max_displacement_x,
                 int max_displacement_y);
   void allocateGrid();
-  void examineRows(dbBlock* block);
+  void examineRows(odb::dbBlock* block);
   std::unordered_set<int> getRowCoordinates() const;
 
   GridX gridX(DbuX x) const;
@@ -89,7 +91,7 @@ class Grid
   GridY gridEndY(DbuY y) const;
 
   // Snap outwards to fully contain
-  GridRect gridCovering(const Rect& rect) const;
+  GridRect gridCovering(const odb::Rect& rect) const;
   GridRect gridCovering(const Node* cell) const;
   GridRect gridCoveringPadded(const Node* cell) const;
 
@@ -135,10 +137,11 @@ class Grid
   Pixel& pixel(GridY y, GridX x) { return pixels_[y.v][x.v]; }
   const Pixel& pixel(GridY y, GridX x) const { return pixels_[y.v][x.v]; }
 
-  std::optional<dbOrientType> getSiteOrientation(GridX x,
-                                                 GridY y,
-                                                 dbSite* site) const;
-  std::pair<dbSite*, dbOrientType> getShortestSite(GridX grid_x, GridY grid_y);
+  std::optional<odb::dbOrientType> getSiteOrientation(GridX x,
+                                                      GridY y,
+                                                      dbSite* site) const;
+  std::pair<dbSite*, odb::dbOrientType> getShortestSite(GridX grid_x,
+                                                        GridY grid_y);
 
   void resize(int size) { pixels_.resize(size); }
   void resize(GridY size) { pixels_.resize(size.v); }
@@ -149,14 +152,14 @@ class Grid
 
   GridY getRowCount(DbuY row_height) const;
 
-  Rect getCore() const { return core_; }
+  odb::Rect getCore() const { return core_; }
   bool cellFitsInCore(Node* cell) const;
 
   bool isMultiHeight(dbMaster* master) const;
 
  private:
   // Maps a site to the right orientation to use in a given row
-  using SiteToOrientation = std::map<dbSite*, dbOrientType>;
+  using SiteToOrientation = std::map<dbSite*, odb::dbOrientType>;
 
   // Used to combine the SiteToOrientation for two intervals when merged
   template <typename MapType>
@@ -182,15 +185,15 @@ class Grid
 
   using Pixels = std::vector<std::vector<Pixel>>;
 
-  void markHopeless(dbBlock* block,
+  void markHopeless(odb::dbBlock* block,
                     int max_displacement_x,
                     int max_displacement_y);
-  void markBlocked(dbBlock* block);
-  void visitDbRows(dbBlock* block,
+  void markBlocked(odb::dbBlock* block);
+  void visitDbRows(odb::dbBlock* block,
                    const std::function<void(odb::dbRow*)>& func) const;
 
   Logger* logger_ = nullptr;
-  dbBlock* block_ = nullptr;
+  odb::dbBlock* block_ = nullptr;
   std::shared_ptr<Padding> padding_;
   Pixels pixels_;
   // Contains all the rows' yLo plus the yHi of the last row.  The extra
@@ -203,7 +206,7 @@ class Grid
   std::vector<RowSitesMap> row_sites_;
 
   bool has_hybrid_rows_ = false;
-  Rect core_;
+  odb::Rect core_;
 
   std::optional<DbuY> uniform_row_height_;  // unset if hybrid
   DbuX site_width_{0};
