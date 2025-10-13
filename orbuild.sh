@@ -156,24 +156,42 @@ delete_dependensies() {
   fi
 }
 install_compressors() {
-  mkdir -p $PREFIX/tmp/zlib
-  cd $PREFIX/tmp/zlib
-  wget https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
-  tar -xvf zlib-1.3.1.tar.gz
-  cd zlib-1.3.1 
-  AR="$AR" RANLIB="$RANLIB" CC="${CC}" CXX="${CXX}" CFLAGS="${DEP_FLAGS} -ffat-lto-objects" CXXFLAGS="${DEP_FLAGS} -ffat-lto-objects" ./configure --prefix=$PREFIX 
-  AR="$AR" RANLIB="$RANLIB" CC="${CC}" CXX="${CXX}" CFLAGS="${DEP_FLAGS} -ffat-lto-objects" CXXFLAGS="${DEP_FLAGS} -ffat-lto-objects" make -j12
-  make install PREFIX=$PREFIX
+  if [[ ! -d  prefix/include/zlib.h ]];    then
+    mkdir -p $PREFIX/tmp/zlib
+    cd $PREFIX/tmp/zlib
+    wget https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
+    tar -xvf zlib-1.3.1.tar.gz
+    cd zlib-1.3.1 
+    AR="$AR" RANLIB="$RANLIB" CC="${CC}" CXX="${CXX}" CFLAGS="${DEP_FLAGS} -ffat-lto-objects" CXXFLAGS="${DEP_FLAGS} -ffat-lto-objects" ./configure --prefix=$PREFIX 
+    AR="$AR" RANLIB="$RANLIB" CC="${CC}" CXX="${CXX}" CFLAGS="${DEP_FLAGS} -ffat-lto-objects" CXXFLAGS="${DEP_FLAGS} -ffat-lto-objects" make -j12
+    make install PREFIX=$PREFIX
+  fi
 
-  mkdir -p $PREFIX/tmp/bzip2
-  cd $PREFIX/tmp/bzip2
-  wget https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
-  tar -xvf bzip2-1.0.8.tar.gz
-  cd bzip2-1.0.8
-  AR="$AR" RANLIB="$RANLIB" CC="${CC}" CXX="${CXX}" CFLAGS=${DEP_FLAGS} CXXFLAGS=${DEP_FLAGS} PREFIX=$PREFIX make -f Makefile-libbz2_so
-  AR="$AR" RANLIB="$RANLIB" CC="${CC}" CXX="${CXX}" CFLAGS=${DEP_FLAGS} CXXFLAGS=${DEP_FLAGS} PREFIX=$PREFIX make bzip2 bzip2recover -j12
-  make install PREFIX=$PREFIX
+  if [[ ! -d  prefix/bin/bzip2 ]];    then
+    mkdir -p $PREFIX/tmp/bzip2
+    cd $PREFIX/tmp/bzip2
+    wget https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
+    tar -xvf bzip2-1.0.8.tar.gz
+    cd bzip2-1.0.8
+    AR="$AR" RANLIB="$RANLIB" CC="${CC}" CXX="${CXX}" CFLAGS=${DEP_FLAGS} CXXFLAGS=${DEP_FLAGS} PREFIX=$PREFIX make -f Makefile-libbz2_so
+    AR="$AR" RANLIB="$RANLIB" CC="${CC}" CXX="${CXX}" CFLAGS=${DEP_FLAGS} CXXFLAGS=${DEP_FLAGS} PREFIX=$PREFIX make bzip2 bzip2recover -j12
+    make install PREFIX=$PREFIX
+  fi
+
+  if [[ ! -d  prefix/lib64/libyaml-cpp.a ]];    then
+    cd $PREFIX/tmp/
+    git clone https://github.com/jbeder/yaml-cpp
+    cd yaml-cpp
+    mkdir build
+    cd build
+    cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" ..
+    make -j 
+    make install
+  fi
+
+
 }
+
 install_dependencies () {
   install_compressors
   cd $PREFIX
@@ -185,7 +203,7 @@ install_OR () {
     buildscript="$(realpath ./etc/Build.sh)"
     prefixfile="$(realpath openroad_deps_prefixes.txt)"
     PATH="$PREFIX:$PATH"
-    source "$buildscript"  -gpu  -cmake="-DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=OFF  -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DLINK_TIME_OPTIMIZATION=1  -DPython3_EXECUTABLE=/usr/bin/python3.6 -DCMAKE_PREFIX_PATH='${PREFIX}' -DCMAKE_CXX_FLAGS='${OR_FLAGS}' -DCMAKE_C_FLAGS='${OR_FLAGS}' -DCMAKE_C_COMPILER='${CC}' -DCMAKE_CXX_COMPILER='${CXX}' -DCMAKE_AR=${AR} -DCMAKE_RANLIB=${RANLIB} -DCMAKE_INSTALL_PREFIX=${PREFIX}"
+    source "$buildscript"  -gpu  -cmake="-DCMAKE_IGNORE_PATH="/usr/local/anaconda3/" -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=OFF  -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DLINK_TIME_OPTIMIZATION=1  -DPython3_EXECUTABLE=/usr/bin/python3.6 -DCMAKE_PREFIX_PATH='${PREFIX}' -DCMAKE_CXX_FLAGS='${OR_FLAGS}' -DCMAKE_C_FLAGS='${OR_FLAGS}' -DCMAKE_C_COMPILER='${CC}' -DCMAKE_CXX_COMPILER='${CXX}' -DCMAKE_AR=${AR} -DCMAKE_RANLIB=${RANLIB} -DCMAKE_INSTALL_PREFIX=${PREFIX}"
     make -C build install 
 }
 

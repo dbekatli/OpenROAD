@@ -142,7 +142,8 @@ _installCommonDev() {
         cd "${baseDir}"
 
         mirrors=(
-            "https://ftp.gnu.org/gnu/bison"
+            "https://cdimage.debian.org/mirror/gnu.org/gnu/bison"
+	    "https://ftp.gnu.org/gnu/bison"
             "https://ftpmirror.gnu.org/bison"
             "https://mirrors.kernel.org/gnu/bison"
             "https://mirrors.dotsrc.org/gnu/bison"
@@ -210,8 +211,9 @@ _installCommonDev() {
             ./Tools/pcre-build.sh
         fi
         ./autogen.sh
-        ./configure --prefix=${swigPrefix} CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" CC="${CC}" CXX="${CXX}"
-        make -j $(nproc)
+        echo "swig prefix ${swigPrefix}"
+        PATH="${PREFIX}/bin/:$PATH" ./configure --prefix=${swigPrefix} CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" CC="${CC}" CXX="${CXX}"
+        PATH="${PREFIX}/bin/:$PATH" make -j $(nproc)
         make -j $(nproc) install
     else
         echo "Swig already installed."
@@ -231,12 +233,13 @@ _installCommonDev() {
 	    echo "using gcc : : ${CXX} : <archiver>${AR} <ranlib>  ${RANLIB} ;" > user-config.jam
         echo "using zlib : : <include>$PREFIX/include <library>$PREFIX/lib ;" >> user-config.jam
         echo "using bzip2 : : <include>$PREFIX/include <library>$PREFIX/lib ;" >> user-config.jam
+        echo "using python : 3.6 : /usr/bin/python3.6 : /usr/bin/python3.6m : /usr/include/python3.6m ;" >> user-config.jam
 
-        CC=${CC} CXX=${CXX} ./bootstrap.sh --prefix="${boostPrefix}" --with-toolset=gcc
+        PATH=${PREFIX}/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin CC=${CC} CXX=${CXX} ./bootstrap.sh --prefix="${boostPrefix}" --with-toolset=gcc
         OUTPUT="$(printenv)"
         echo "${OUTPUT}"
         
-        CC=${CC} CXX=${CXX} ./b2 --prefix="${boostPrefix}" --user-config=user-config.jam toolset=gcc  install --with-iostreams --with-test --with-serialization --with-system --with-thread -j $(nproc) cflags="${CFLAGS}" cxxflags="${CXXFLAGS}" --debug-configuration
+        PATH=${PREFIX}/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin CC=${CC} CXX=${CXX} ./b2 --prefix="${boostPrefix}" --user-config=user-config.jam toolset=gcc  install  -j $(nproc) cflags="$(printf '%s\n' "${CFLAGS//"-flto=auto"/}")" cxxflags="$(printf '%s\n' "${CXXFLAGS//"-flto=auto"/}")" --debug-configuration
     else
         echo "Boost already installed."
     fi
@@ -329,20 +332,23 @@ _installCommonDev() {
 
     # Abseil
     abslPrefix=${PREFIX:-"/usr/local"}
-    if [[ ! -d ${abslPrefix}/absl/base ]]; then
+    if [[ ! -d ${abslPrefix}/include/absl ]]; then
         cd "${baseDir}"
         eval wget https://github.com/abseil/abseil-cpp/releases/download/${abslVersion}/abseil-cpp-${abslVersion}.tar.gz
         md5sum -c <(echo "${abslChecksum} abseil-cpp-${abslVersion}.tar.gz") || exit 1
         tar xf abseil-cpp-${abslVersion}.tar.gz
         cd abseil-cpp-${abslVersion}
-        ${cmakePrefix}/bin/cmake -DCMAKE_INSTALL_PREFIX="${abslPrefix}" -DCMAKE_CXX_STANDARD=17 -B build .
+        ${cmakePrefix}/bin/cmake -DCMAKE_INSTALL_PREFIX="${abslPrefix}"  -DCMAKE_CXX_FLAGS="${CXXFLAGS}" -DCMAKE_C_FLAGS="${CFLAGS}" -DCMAKE_C_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX} -DCMAKE_AR=${AR} -DCMAKE_RANLIB=${RANLIB} -DCMAKE_CXX_STANDARD=17 -B build .
+         echo absl install
         ${cmakePrefix}/bin/cmake --build build --target install
+         echo absl installed
     else
         echo "Abseil already installed."
     fi
     CMAKE_PACKAGE_ROOT_ARGS+=" -D ABSL_ROOT=$(realpath $abslPrefix) "
 
     if [[ ${equivalenceDeps} == "yes" ]]; then
+        echo absl installed
         _equivalenceDeps
     fi
 
@@ -365,8 +371,9 @@ _installCommonDev() {
 
     cd "${lastDir}"
     rm -rf "${baseDir}"
-
+    echo post ci
     if [[ ! -z ${PREFIX} ]]; then
+        echo environment setup script
         # Emit an environment setup script
         cat > ${PREFIX}/env.sh <<EOF
 if [ -n "\$ZSH_VERSION" ]; then
@@ -378,10 +385,12 @@ fi
 PATH=\${depRoot}/bin:\${PATH}
 LD_LIBRARY_PATH=\${depRoot}/lib64:\${depRoot}/lib:\${LD_LIBRARY_PATH}
 EOF
+    echo environment setup script done
     fi
 }
 
 _installOrTools() {
+    
     os=$1
     osVersion=$2
     arch=$3
@@ -389,16 +398,19 @@ _installOrTools() {
 
     orToolsVersionBig=9.11
     orToolsVersionSmall=${orToolsVersionBig}.4210
+    echo _installOrTools skipSystemOrTools ${skipSystemOrTools}
 
     rm -rf "${baseDir}"
     mkdir -p "${baseDir}"
     if [[ ! -z "${PREFIX}" ]]; then mkdir -p "${PREFIX}"; fi
     cd "${baseDir}"
-
+    skipSystemOrTools="true"
     # Disable exit on error for 'find' command, as it might return non zero
     if [[ "${skipSystemOrTools}" == "false" ]]; then
       set +euo pipefail
+      echo find
       LIST=($(find /local* /opt* /lib* /usr* /bin* -type f -name "libortools.so*" 2>/dev/null))
+      echo find done
       # Bring back exit on error
       set -euo pipefail
       # Return if right version of or-tools is installed
