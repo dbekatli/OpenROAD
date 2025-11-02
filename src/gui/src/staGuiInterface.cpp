@@ -890,7 +890,10 @@ sta::PathEndVisitor* PathGroupSlackEndVisitor::copy() const
 void PathGroupSlackEndVisitor::visit(sta::PathEnd* path_end)
 {
   sta::Search* search = sta_->search();
-  if (search->pathGroup(path_end) == path_group_) {
+  const sta::PathGroupSeq path_groups = search->pathGroups(path_end);
+  const auto iter
+      = std::find(path_groups.begin(), path_groups.end(), path_group_);
+  if (iter != path_groups.end()) {
     if (clk_ != nullptr) {
       sta::Path* path = path_end->path();
       if (path->clock(sta_) != clk_) {
@@ -1095,6 +1098,7 @@ TimingPathList STAGuiInterface::getTimingPaths(
           pins, nullptr, nullptr, sta::RiseFallBoth::riseFall()));
     }
   }
+
   sta::ExceptionTo* e_to = nullptr;
   if (!to.empty()) {
     sta::PinSet* pins = new sta::PinSet(getNetwork());
