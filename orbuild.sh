@@ -203,7 +203,7 @@ install_OR () {
     buildscript="$(realpath ./etc/Build.sh)"
     prefixfile="$(realpath openroad_deps_prefixes.txt)"
     PATH="$PREFIX:$PATH"
-    source "$buildscript"  -gpu  -cmake="-DCMAKE_IGNORE_PATH="/usr/local/anaconda3/" -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=OFF  -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DLINK_TIME_OPTIMIZATION=1  -DPython3_EXECUTABLE=/usr/bin/python3.6 -DCMAKE_PREFIX_PATH='${PREFIX}' -DCMAKE_CXX_FLAGS='${OR_FLAGS}' -DCMAKE_C_FLAGS='${OR_FLAGS}' -DCMAKE_C_COMPILER='${CC}' -DCMAKE_CXX_COMPILER='${CXX}' -DCMAKE_AR=${AR} -DCMAKE_RANLIB=${RANLIB} -DCMAKE_INSTALL_PREFIX=${PREFIX}"
+    source "$buildscript" -cpp20 -gpu  -cmake="-DCMAKE_IGNORE_PATH="/usr/local/anaconda3/" -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=OFF  -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DLINK_TIME_OPTIMIZATION=1  -DPython3_EXECUTABLE=/usr/bin/python3.6 -DCMAKE_PREFIX_PATH='${PREFIX}' -DCMAKE_CXX_FLAGS='${OR_FLAGS}' -DCMAKE_C_FLAGS='${OR_FLAGS}' -DCMAKE_C_COMPILER='${CC}' -DCMAKE_CXX_COMPILER='${CXX}' -DCMAKE_AR=${AR} -DCMAKE_RANLIB=${RANLIB} -DCMAKE_INSTALL_PREFIX=${PREFIX}"
     make -C build install 
 }
 
