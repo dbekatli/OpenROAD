@@ -546,8 +546,11 @@ void PatternRoute::calculateRoutingCosts(
         if (grid_graph_->getLayerDirection(layerIndex) != direction) {
           continue;
         }
-        CostT cost = path->getCosts()[layerIndex]
-                     + grid_graph_->getWireCost(layerIndex, *node, *path);
+        CostT cost
+            = net_->isInsideLayerRange(layerIndex)
+                  ? path->getCosts()[layerIndex]
+                        + grid_graph_->getWireCost(layerIndex, *node, *path)
+                  : std::numeric_limits<CostT>::max();
         if (cost < costs[layerIndex].first) {
           costs[layerIndex] = std::make_pair(cost, pathIndex);
         }
@@ -637,6 +640,12 @@ std::shared_ptr<GRTreeNode> PatternRoute::getRoutingTree(
     }
   }
   assert(parentLayerIndex >= 0);
+  if (parentLayerIndex < 0) {
+    logger_->error(utl::GRT,
+                   286,
+                   "Failed to determine parent layer index on net {}.",
+                   net_->getName());
+  }
   std::shared_ptr<GRTreeNode> routingNode
       = std::make_shared<GRTreeNode>(parentLayerIndex, node->x(), node->y());
   std::shared_ptr<GRTreeNode> lowestRoutingNode = routingNode;

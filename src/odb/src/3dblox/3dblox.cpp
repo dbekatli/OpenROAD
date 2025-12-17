@@ -9,22 +9,27 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "bmapParser.h"
 #include "checker.h"
 #include "dbvParser.h"
+#include "dbvWriter.h"
 #include "dbxParser.h"
+#include "dbxWriter.h"
 #include "objects.h"
 #include "odb/db.h"
 #include "odb/dbTransform.h"
 #include "odb/dbTypes.h"
 #include "odb/defin.h"
+#include "odb/defout.h"
 #include "odb/geom.h"
 #include "odb/lefin.h"
+#include "odb/lefout.h"
 #include "sta/Sta.hh"
 #include "utl/Logger.h"
-
+#include "utl/ScopedTemporaryFile.h"
 namespace odb {
 
 static std::map<std::string, std::string> dup_orient_map
@@ -84,7 +89,6 @@ void ThreeDBlox::readDbx(const std::string& dbx_file)
   }
   calculateSize(db_->getChip());
   db_->triggerPostRead3Dbx(chip);
-  check();
 }
 
 void ThreeDBlox::check()
@@ -93,15 +97,108 @@ void ThreeDBlox::check()
   checker.check(db_->getChip());
 }
 
+namespace {
+std::unordered_set<odb::dbTech*> getUsedTechs(odb::dbChip* chip)
+{
+  std::unordered_set<odb::dbTech*> techs;
+  for (auto inst : chip->getChipInsts()) {
+    if (inst->getMasterChip()->getTech() != nullptr) {
+      techs.insert(inst->getMasterChip()->getTech());
+    }
+  }
+  return techs;
+}
+std::unordered_set<odb::dbLib*> getUsedLibs(odb::dbChip* chip)
+{
+  std::unordered_set<odb::dbLib*> libs;
+  for (auto inst : chip->getChipInsts()) {
+    auto master_chip = inst->getMasterChip();
+    if (master_chip->getBlock() != nullptr) {
+      for (auto inst : master_chip->getBlock()->getInsts()) {
+        libs.insert(inst->getMaster()->getLib());
+      }
+    }
+  }
+  return libs;
+}
+std::string getResultsDirectoryPath(const std::string& file_path)
+{
+  std::string current_dir_path;
+  auto path = std::filesystem::path(file_path);
+  if (path.has_parent_path()) {
+    current_dir_path = path.parent_path().string() + "/";
+  }
+  return current_dir_path;
+}
+}  // namespace
+void ThreeDBlox::writeDbv(const std::string& dbv_file, odb::dbChip* chip)
+{
+  if (chip == nullptr) {
+    return;
+  }
+  ///////////Results Directory Path ///////////
+  std::string current_dir_path = getResultsDirectoryPath(dbv_file);
+  ////////////////////////////////////////////
+
+  for (auto inst : chip->getChipInsts()) {
+    auto master_chip = inst->getMasterChip();
+    if (master_chip->getChipType() == odb::dbChip::ChipType::HIER) {
+      writeDbx(current_dir_path + master_chip->getName() + ".3dbx",
+               master_chip);
+    }
+  }
+  // write used techs
+  for (auto tech : getUsedTechs(chip)) {
+    if (written_techs_.find(tech) != written_techs_.end()) {
+      continue;
+    }
+    written_techs_.insert(tech);
+    std::string tech_file_path = current_dir_path + tech->getName() + ".lef";
+    utl::OutStreamHandler stream_handler(tech_file_path.c_str());
+    odb::lefout lef_writer(logger_, stream_handler.getStream());
+    lef_writer.writeTech(tech);
+  }
+  // write used libs
+  for (auto lib : getUsedLibs(chip)) {
+    if (written_libs_.find(lib) != written_libs_.end()) {
+      continue;
+    }
+    written_libs_.insert(lib);
+    std::string lib_file_path = current_dir_path + lib->getName() + "_lib.lef";
+    utl::OutStreamHandler stream_handler(lib_file_path.c_str());
+    odb::lefout lef_writer(logger_, stream_handler.getStream());
+    lef_writer.writeLib(lib);
+  }
+
+  DbvWriter writer(logger_, db_);
+  writer.writeChiplet(dbv_file, chip);
+}
+
+void ThreeDBlox::writeDbx(const std::string& dbx_file, odb::dbChip* chip)
+{
+  if (chip == nullptr) {
+    return;
+  }
+  ///////////Results Directory Path ///////////
+  std::string current_dir_path = getResultsDirectoryPath(dbx_file);
+  ////////////////////////////////////////////
+
+  writeDbv(current_dir_path + chip->getName() + ".3dbv", chip);
+
+  DbxWriter writer(logger_, db_);
+  writer.writeChiplet(dbx_file, chip);
+}
+
 void ThreeDBlox::calculateSize(dbChip* chip)
 {
-  Rect box;
-  box.mergeInit();
+  Cuboid cuboid;
+  cuboid.mergeInit();
   for (auto inst : chip->getChipInsts()) {
-    box.merge(inst->getBBox());
+    cuboid.merge(inst->getCuboid());
   }
-  chip->setWidth(box.dx());
-  chip->setHeight(box.dy());
+  chip->setWidth(cuboid.dx());
+  chip->setHeight(cuboid.dy());
+  chip->setThickness(cuboid.dz());
 }
 
 void ThreeDBlox::readHeaderIncludes(const std::vector<std::string>& includes)
@@ -135,11 +232,13 @@ dbChip::ChipType getChipType(const std::string& type, utl::Logger* logger)
   logger->error(
       utl::ODB, 527, "3DBV Parser Error: Invalid chip type: {}", type);
 }
+
 std::string getFileName(const std::string& tech_file_path)
 {
   std::filesystem::path tech_file_path_fs(tech_file_path);
   return tech_file_path_fs.stem().string();
 }
+
 void ThreeDBlox::createChiplet(const ChipletDef& chiplet)
 {
   dbTech* tech = nullptr;
@@ -203,21 +302,33 @@ void ThreeDBlox::createChiplet(const ChipletDef& chiplet)
                         chip,
                         /*issue_callback*/ false);
   }
-  chip->setWidth(chiplet.design_width * db_->getDbuPerMicron());
-  chip->setHeight(chiplet.design_height * db_->getDbuPerMicron());
-  chip->setThickness(chiplet.thickness * db_->getDbuPerMicron());
-  chip->setShrink(chiplet.shrink);
+  if (chiplet.design_width != -1.0) {
+    chip->setWidth(chiplet.design_width * db_->getDbuPerMicron());
+  }
+  if (chiplet.design_height != -1.0) {
+    chip->setHeight(chiplet.design_height * db_->getDbuPerMicron());
+  }
+  if (chiplet.thickness != -1.0) {
+    chip->setThickness(chiplet.thickness * db_->getDbuPerMicron());
+  }
+  if (chiplet.shrink != -1.0) {
+    chip->setShrink(chiplet.shrink);
+  }
   chip->setTsv(chiplet.tsv);
 
-  chip->setScribeLineEast(chiplet.scribe_line_right * db_->getDbuPerMicron());
-  chip->setScribeLineWest(chiplet.scribe_line_left * db_->getDbuPerMicron());
-  chip->setScribeLineNorth(chiplet.scribe_line_top * db_->getDbuPerMicron());
-  chip->setScribeLineSouth(chiplet.scribe_line_bottom * db_->getDbuPerMicron());
-
-  chip->setSealRingEast(chiplet.seal_ring_right * db_->getDbuPerMicron());
-  chip->setSealRingWest(chiplet.seal_ring_left * db_->getDbuPerMicron());
-  chip->setSealRingNorth(chiplet.seal_ring_top * db_->getDbuPerMicron());
-  chip->setSealRingSouth(chiplet.seal_ring_bottom * db_->getDbuPerMicron());
+  if (chiplet.scribe_line_right != -1.0) {
+    chip->setScribeLineEast(chiplet.scribe_line_right * db_->getDbuPerMicron());
+    chip->setScribeLineWest(chiplet.scribe_line_left * db_->getDbuPerMicron());
+    chip->setScribeLineNorth(chiplet.scribe_line_top * db_->getDbuPerMicron());
+    chip->setScribeLineSouth(chiplet.scribe_line_bottom
+                             * db_->getDbuPerMicron());
+  }
+  if (chiplet.seal_ring_right != -1.0) {
+    chip->setSealRingEast(chiplet.seal_ring_right * db_->getDbuPerMicron());
+    chip->setSealRingWest(chiplet.seal_ring_left * db_->getDbuPerMicron());
+    chip->setSealRingNorth(chiplet.seal_ring_top * db_->getDbuPerMicron());
+    chip->setSealRingSouth(chiplet.seal_ring_bottom * db_->getDbuPerMicron());
+  }
 
   chip->setOffset(Point(chiplet.offset.x * db_->getDbuPerMicron(),
                         chiplet.offset.y * db_->getDbuPerMicron()));
@@ -225,13 +336,18 @@ void ThreeDBlox::createChiplet(const ChipletDef& chiplet)
       && chip->getBlock() == nullptr) {
     // blackbox stage, create block
     auto block = odb::dbBlock::create(chip, chiplet.name.c_str());
-    block->setDieArea(Rect(0, 0, chip->getWidth(), chip->getHeight()));
-    block->setCoreArea(Rect(0, 0, chip->getWidth(), chip->getHeight()));
+    const int x_min = chip->getScribeLineWest() + chip->getSealRingWest();
+    const int y_min = chip->getScribeLineSouth() + chip->getSealRingSouth();
+    const int x_max = x_min + chip->getWidth();
+    const int y_max = y_min + chip->getHeight();
+    block->setDieArea(Rect(x_min, y_min, x_max, y_max));
+    block->setCoreArea(Rect(x_min, y_min, x_max, y_max));
   }
   for (const auto& [_, region] : chiplet.regions) {
     createRegion(region, chip);
   }
 }
+
 dbChipRegion::Side getChipRegionSide(const std::string& side,
                                      utl::Logger* logger)
 {
@@ -305,8 +421,11 @@ void ThreeDBlox::createBump(const BumpMapEntry& entry,
   auto bump = dbChipBump::create(chip_region, inst);
   Rect bbox;
   inst->getMaster()->getPlacementBoundary(bbox);
-  inst->setOrigin((entry.x * db_->getDbuPerMicron()) - bbox.xCenter(),
-                  (entry.y * db_->getDbuPerMicron()) - bbox.yCenter());
+  int x = (entry.x * db_->getDbuPerMicron()) - bbox.xCenter()
+          + chip->getOffset().x();
+  int y = (entry.y * db_->getDbuPerMicron()) - bbox.yCenter()
+          + chip->getOffset().y();
+  inst->setOrigin(x, y);
   inst->setPlacementStatus(dbPlacementStatus::FIRM);
   if (entry.net_name != "-") {
     auto net = block->findNet(entry.net_name.c_str());
@@ -341,6 +460,7 @@ dbChip* ThreeDBlox::createDesignTopChiplet(const DesignDef& design)
   db_->setTopChip(chip);
   return chip;
 }
+
 void ThreeDBlox::createChipInst(const ChipletInst& chip_inst)
 {
   auto chip = db_->findChip(chip_inst.reference.c_str());
@@ -353,9 +473,6 @@ void ThreeDBlox::createChipInst(const ChipletInst& chip_inst)
                    chip_inst.name);
   }
   dbChipInst* inst = dbChipInst::create(db_->getChip(), chip, chip_inst.name);
-  inst->setLoc(Point3D(chip_inst.loc.x * db_->getDbuPerMicron(),
-                       chip_inst.loc.y * db_->getDbuPerMicron(),
-                       chip_inst.z * db_->getDbuPerMicron()));
   auto orient_str = chip_inst.orient;
   if (dup_orient_map.find(orient_str) != dup_orient_map.end()) {
     orient_str = dup_orient_map[orient_str];
@@ -369,6 +486,9 @@ void ThreeDBlox::createChipInst(const ChipletInst& chip_inst)
                    chip_inst.name);
   }
   inst->setOrient(orient.value());
+  inst->setLoc(Point3D(chip_inst.loc.x * db_->getDbuPerMicron(),
+                       chip_inst.loc.y * db_->getDbuPerMicron(),
+                       chip_inst.z * db_->getDbuPerMicron()));
 }
 std::vector<std::string> splitPath(const std::string& path)
 {

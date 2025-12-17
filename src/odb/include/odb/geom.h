@@ -217,6 +217,7 @@ class Cuboid
   int yhi_ = 0;
   int zhi_ = 0;
 };
+std::ostream& operator<<(std::ostream& os, const Cuboid& cIn);
 
 /*
 an Oct represents a 45-degree routing segment as 2 connected octagons
@@ -352,7 +353,7 @@ class Rect
 
   int minDXDY() const;
   int maxDXDY() const;
-  int getDir() const;
+  Orientation2D getDir() const;
 
   void set_xlo(int x);
   void set_xhi(int x);
@@ -669,17 +670,14 @@ inline int Rect::maxDXDY() const
   return std::max(dx(), dy());
 }
 
-inline int Rect::getDir() const
+inline Orientation2D Rect::getDir() const
 {
   const int DX = dx();
   const int DY = dy();
   if (DX < DY) {
-    return 0;
+    return vertical;
   }
-  if (DX > DY) {
-    return 1;
-  }
-  return -1;
+  return horizontal;
 }
 
 inline void Rect::moveTo(int x, int y)
