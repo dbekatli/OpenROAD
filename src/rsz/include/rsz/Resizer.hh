@@ -6,6 +6,7 @@
 #include <array>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "db_sta/dbNetwork.hh"
@@ -375,6 +376,9 @@ class Resizer : public dbStaState, public dbNetworkObserver
   {
     clk_buffers_ = clk_buffers;
   }
+  void inferClockBufferList(const char* lib_name,
+                            std::vector<std::string>& buffers);
+  bool isClockCellCandidate(sta::LibertyCell* cell);
   // Clone inverters next to the registers they drive to remove them
   // from the clock network.
   // yosys is too stupid to use the inverted clock registers
@@ -738,7 +742,7 @@ class Resizer : public dbStaState, public dbNetworkObserver
   const MinMax* max_ = MinMax::max();
   LibertyCellSeq buffer_cells_;
   LibertyCell* buffer_lowest_drive_ = nullptr;
-  std::set<LibertyCell*> buffer_fast_sizes_;
+  std::unordered_set<LibertyCell*> buffer_fast_sizes_;
   // Buffer list created by CTS kept here so that we use the
   // exact same buffers when reparing clock nets.
   LibertyCellSeq clk_buffers_;

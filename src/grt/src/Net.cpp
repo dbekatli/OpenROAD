@@ -4,11 +4,13 @@
 #include "Net.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <set>
 #include <string>
 #include <vector>
 
+#include "grt/GRoute.h"
 #include "grt/GlobalRouter.h"
 #include "odb/db.h"
 #include "odb/dbShape.h"
@@ -133,7 +135,7 @@ int Net::getNumBTermsAboveMaxLayer(odb::dbTechLayer* max_routing_layer)
 bool Net::hasStackedVias(odb::dbTechLayer* max_routing_layer)
 {
   int bterms_above_max_layer = getNumBTermsAboveMaxLayer(max_routing_layer);
-  odb::uint wire_cnt = 0, via_cnt = 0;
+  uint32_t wire_cnt = 0, via_cnt = 0;
   net_->getWireCount(wire_cnt, via_cnt);
 
   if (wire_cnt != 0 || via_cnt == 0) {

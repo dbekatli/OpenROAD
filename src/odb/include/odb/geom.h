@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <climits>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -13,7 +14,6 @@
 #include <vector>
 
 #include "odb/isotropy.h"
-#include "odb/odb.h"
 #include "utl/Logger.h"
 
 namespace odb {
