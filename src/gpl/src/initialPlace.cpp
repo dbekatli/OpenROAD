@@ -150,7 +150,7 @@ void InitialPlace::placeInstsCenter()
       inst->setCenterLocation(region_x_max - (region_x_max - region_x_min) / 2,
                               region_y_max - (region_y_max - region_y_min) / 2);
       ++count_region_center;
-    } else if (pbc_->isSkipIoMode() && db_inst->isPlaced()) {
+    } else if (db_inst->isPlaced()) {
       // It is helpful to pick up the placement from mpl if available,
       // particularly when you are going to run skip_io.
       const auto bbox = db_inst->getBBox()->getBox();
