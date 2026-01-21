@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2019-2025, The OpenROAD Authors
 
-#include <string.h>
+#include <string.h>  // NOLINT(modernize-deprecated-headers): for strdup()
 
 #include <algorithm>
 #include <cassert>
@@ -1844,8 +1844,7 @@ void extMain::makeBlockRCsegs(const char* netNames,
 
   std::vector<dbNet*> inets;
   _allNet = !findSomeNet(_block, netNames, inets, logger_);
-  for (uint32_t j = 0; j < inets.size(); j++) {
-    dbNet* net = inets[j];
+  for (auto net : inets) {
     net->setMark(true);
   }
 

@@ -31,7 +31,7 @@
 #pragma warning(disable : 4786)
 #endif
 
-#include <string.h>
+#include <string.h>  // NOLINT(modernize-deprecated-headers): for strdup()
 
 #include <cstdio>
 #include <cstdlib>
@@ -2830,7 +2830,8 @@ int main(int argc, char** argv)
       argv++;
       argc--;
       outFile = *argv;
-      if ((fout = fopen(outFile, "w")) == nullptr) {
+      fout = fopen(outFile, "w");
+      if (fout == nullptr) {
         fprintf(stderr, "ERROR: could not open output file\n");
         return 2;
       }
@@ -3027,7 +3028,8 @@ int main(int argc, char** argv)
     for (fileCt = 0; fileCt < numInFile; fileCt++) {
       lefrReset();
 
-      if ((f = fopen(inFile[fileCt], "r")) == nullptr) {
+      f = fopen(inFile[fileCt], "r");
+      if (f == nullptr) {
         fprintf(stderr, "Couldn't open input file '%s'\n", inFile[fileCt]);
         return (2);
       }
@@ -3089,7 +3091,8 @@ int main(int argc, char** argv)
         lefrSetLimitPerMsg(2007, 2);
       }
 
-      if ((f = fopen(inFile[fileCt], "r")) == nullptr) {
+      f = fopen(inFile[fileCt], "r");
+      if (f == nullptr) {
         fprintf(stderr, "Couldn't open input file '%s'\n", inFile[fileCt]);
         return (2);
       }
@@ -3119,7 +3122,8 @@ int main(int argc, char** argv)
     for (fileCt = 0; fileCt < numInFile; fileCt++) {
       lefrReset();
 
-      if ((f = fopen(inFile[fileCt], "r")) == nullptr) {
+      f = fopen(inFile[fileCt], "r");
+      if (f == nullptr) {
         fprintf(stderr, "Couldn't open input file '%s'\n", inFile[fileCt]);
         return (2);
       }

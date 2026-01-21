@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2024-2025, The OpenROAD Authors
 
-#include <string.h>
+#include <string.h>  // NOLINT(modernize-deprecated-headers): for strdup()
 
 #include <cctype>
 #include <cmath>

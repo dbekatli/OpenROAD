@@ -101,10 +101,10 @@ void SRoute::addSrouteInst(odb::dbNet* net,
   }
 
   if (sroute_itermss_.empty()) {
-    sroute_itermss_.push_back({});
-    sroute_itermss_.push_back({});
-    sroute_itermss_.push_back({});
-    sroute_itermss_.push_back({});
+    sroute_itermss_.emplace_back();
+    sroute_itermss_.emplace_back();
+    sroute_itermss_.emplace_back();
+    sroute_itermss_.emplace_back();
   }
   sroute_itermss_[best_i].push_back(iterm);
 }
@@ -159,12 +159,8 @@ void SRoute::createSrouteWires(
       sum_iterm_x += x;
       sum_iterm_y += y;
       const odb::Rect bbox = iterm->getBBox();
-      if (bbox.yMin() < low_y) {
-        low_y = bbox.yMin();
-      }
-      if (bbox.yMax() > high_y) {
-        high_y = bbox.yMax();
-      }
+      low_y = std::min(bbox.yMin(), low_y);
+      high_y = std::max(bbox.yMax(), high_y);
     }
 
     int avg_iterm_x = sum_iterm_x / sroute_iterms.size();
@@ -488,7 +484,7 @@ void SRoute::createSrouteWires(
 
       // check to see if center point is too far
       if ((pdn_wire->xMax() - 1000) < avg_iterm_x) {
-        std::cout << "xmax is " << pdn_wire->xMax() << std::endl;
+        std::cout << "xmax is " << pdn_wire->xMax() << '\n';
         odb::dbSBox::create(nwsw,
                             ongrid[ongrid.size() - 1],
                             pdn_wire->xMax() - metalwidths[0],

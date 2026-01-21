@@ -27,6 +27,7 @@
 // *****************************************************************************
 // *****************************************************************************
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -238,7 +239,7 @@ int compf(defrCallbackType_e c, defiComponent* co, defiUserData ud)
     }
     if (co->hasHalo()) {
       int left, bottom, right, top;
-      (void) co->haloEdges(&left, &bottom, &right, &top);
+      co->haloEdges(&left, &bottom, &right, &top);
       fprintf(fout, "+ HALO ");
       if (co->hasHaloSoft()) {
         fprintf(fout, "SOFT ");
@@ -2088,7 +2089,7 @@ int cls(defrCallbackType_e c, void* cl, defiUserData ud)
   defiFill* fills;
   defiStyles* styles;
   int xl, yl, xh, yh;
-  char *name, *a1, *b1;
+  char* name;
   char **inst, **inPin, **outPin;
   int* bits;
   int size;
@@ -2465,9 +2466,9 @@ int cls(defrCallbackType_e c, void* cl, defiUserData ud)
       }
       break;
     case defrDefaultCapCbkType:
-      i = (long long) cl;
+      i = (int64_t) cl;
       fprintf(fout, "DEFAULTCAP %d\n", i);
-      numObjs = (long) i;
+      numObjs = (int64_t) i;
       break;
     case defrRowCbkType:
       row = (defiRow*) cl;
@@ -2761,12 +2762,14 @@ int cls(defrCallbackType_e c, void* cl, defiUserData ud)
       sc = (defiScanchain*) cl;
       fprintf(fout, "- %s\n", sc->name());
       if (sc->hasStart()) {
-        sc->start(&a1, &b1);
-        fprintf(fout, "  + START %s %s\n", a1, b1);
+        char *a, *b;
+        sc->start(&a, &b);
+        fprintf(fout, "  + START %s %s\n", a, b);
       }
       if (sc->hasStop()) {
-        sc->stop(&a1, &b1);
-        fprintf(fout, "  + STOP %s %s\n", a1, b1);
+        char *a, *b;
+        sc->stop(&a, &b);
+        fprintf(fout, "  + STOP %s %s\n", a, b);
       }
       if (sc->hasCommonInPin() || sc->hasCommonOutPin()) {
         fprintf(fout, "  + COMMONSCANPINS ");
@@ -3315,11 +3318,11 @@ void freeCB(void* name)
 }
 
 BEGIN_DEF_PARSER_NAMESPACE
-extern long long nlines;
+extern int64_t nlines;
 END_DEF_PARSER_NAMESPACE
 static int ccr1131444 = 0;
 
-void lineNumberCB(long long lineNo)
+void lineNumberCB(int64_t lineNo)
 {
   // The CCR 1131444 tests ability of the DEF parser to count
   // input line numbers out of 32-bit int range. On the first callback
@@ -3357,7 +3360,7 @@ int main(int argc, char** argv)
   FILE* f;
   int res = 0;
   int noCalls = 0;
-  //  long start_mem;
+  //  int64_t start_mem;
   int retStr = 0;
   int numInFile = 0;
   int fileCt = 0;
@@ -3372,7 +3375,7 @@ int main(int argc, char** argv)
   _set_output_format(_TWO_DIGIT_EXPONENT);
 #endif
 
-  //  start_mem = (long)sbrk(0);
+  //  start_mem = (int64_t)sbrk(0);
 
   strcpy(defaultName, "def.in");
   strcpy(defaultOut, "list");
@@ -3400,7 +3403,8 @@ int main(int argc, char** argv)
       argv++;
       argc--;
       outFile = *argv;
-      if ((fout = fopen(outFile, "w")) == nullptr) {
+      fout = fopen(outFile, "w");
+      if (fout == nullptr) {
         fprintf(stderr, "ERROR: could not open output file\n");
         return 2;
       }
@@ -3647,7 +3651,8 @@ int main(int argc, char** argv)
 
   if (test1) {  // for special tests
     for (fileCt = 0; fileCt < numInFile; fileCt++) {
-      if ((f = fopen(inFile[fileCt], "r")) == nullptr) {
+      f = fopen(inFile[fileCt], "r");
+      if (f == nullptr) {
         fprintf(stderr, "Couldn't open input file '%s'\n", inFile[fileCt]);
         return (2);
       }
@@ -3687,7 +3692,8 @@ int main(int argc, char** argv)
         defrEnableAllMsgs();
       }
 
-      if ((f = fopen(inFile[fileCt], "r")) == nullptr) {
+      f = fopen(inFile[fileCt], "r");
+      if (f == nullptr) {
         fprintf(stderr, "Couldn't open input file '%s'\n", inFile[fileCt]);
         return (2);
       }
@@ -3708,7 +3714,7 @@ int main(int argc, char** argv)
     for (fileCt = 0; fileCt < numInFile; fileCt++) {
       if (strcmp(inFile[fileCt], "STDIN") == 0) {
         f = stdin;
-      } else if ((f = fopen(inFile[fileCt], "r")) == nullptr) {
+      } else if (f = fopen(inFile[fileCt], "r"); f == nullptr) {
         fprintf(stderr, "Couldn't open input file '%s'\n", inFile[fileCt]);
         return (2);
       }

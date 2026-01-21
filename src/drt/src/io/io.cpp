@@ -457,9 +457,7 @@ void io::Parser::createNDR(odb::dbTechNonDefaultRule* ndr)
           == odb::dbTechLayerType::CUT) {
         continue;
       }
-      if (via->getViaLayerRule(i)->getLayer()->getNumber() / 2 < z) {
-        z = via->getViaLayerRule(i)->getLayer()->getNumber() / 2;
-      }
+      z = std::min(via->getViaLayerRule(i)->getLayer()->getNumber() / 2, z);
     }
     fnd->addViaRule(getTech()->getViaRule(via->getName()), z);
   }
@@ -2323,7 +2321,7 @@ void io::Parser::addRoutingLayer(odb::dbTechLayer* layer)
       frUInt4 width, within, spacing;
       rule->getV55InfluenceEntry(width, within, spacing);
       widthTbl.push_back(width);
-      valTbl.push_back({within, spacing});
+      valTbl.emplace_back(within, spacing);
     }
     fr1DLookupTbl<frCoord, std::pair<frCoord, frCoord>> tbl(
         "WIDTH", widthTbl, valTbl);
@@ -2383,7 +2381,7 @@ void io::Parser::addRoutingLayer(odb::dbTechLayer* layer)
     for (uint32_t j = 0; j < layer->getTwoWidthsSpacingTableNumWidths(); ++j) {
       frCoord width = layer->getTwoWidthsSpacingTableWidth(j);
       frCoord prl = layer->getTwoWidthsSpacingTablePRL(j);
-      rowVals.push_back(frSpacingTableTwRowType(width, prl));
+      rowVals.emplace_back(width, prl);
     }
 
     std::unique_ptr<frConstraint> uCon
@@ -3282,9 +3280,9 @@ void io::Writer::mergeSplitConnFigs(
       frCoord beginCoord = isH ? begin.x() : begin.y();
       frCoord endCoord = isH ? end.x() : end.y();
       pathSegMergeMap[std::make_tuple(layerNum, isH, trackLoc)][beginCoord]
-          .push_back(std::make_tuple(pathSeg, true));
+          .emplace_back(pathSeg, true);
       pathSegMergeMap[std::make_tuple(layerNum, isH, trackLoc)][endCoord]
-          .push_back(std::make_tuple(pathSeg, false));
+          .emplace_back(pathSeg, false);
 
     } else if (connFig->typeId() == frcVia) {
       auto via = std::dynamic_pointer_cast<frVia>(connFig);

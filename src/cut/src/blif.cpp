@@ -260,11 +260,8 @@ bool Blif::writeBlif(const char* file_name, bool write_arrival_requireds)
 
   // remove drivers from input list
   std::vector<std::string> common_ports;
-  set_intersection(inputs.begin(),
-                   inputs.end(),
-                   outputs.begin(),
-                   outputs.end(),
-                   std::back_inserter(common_ports));
+  std::ranges::set_intersection(
+      inputs, outputs, std::back_inserter(common_ports));
 
   for (auto&& port : common_ports) {
     inputs.erase(port);
@@ -301,12 +298,12 @@ bool Blif::writeBlif(const char* file_name, bool write_arrival_requireds)
   if (write_arrival_requireds) {
     for (auto& arrival : arrivals_) {
       f << ".input_arrival " << arrival.first << " " << arrival.second.first
-        << " " << arrival.second.second << std::endl;
+        << " " << arrival.second.second << '\n';
     }
 
     for (auto& required : requireds_) {
       f << ".output_required " << required.first << " " << required.second.first
-        << " " << required.second.second << std::endl;
+        << " " << required.second.second << '\n';
     }
   }
 

@@ -4,6 +4,7 @@
 #include "dbDescriptors.h"
 
 #include <QInputDialog>
+#include <QMessageBox>
 #include <QString>
 #include <QStringList>
 #include <algorithm>
@@ -11,6 +12,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <functional>
 #include <limits>
 #include <map>
@@ -30,6 +32,7 @@
 #include "db_sta/dbNetwork.hh"
 #include "db_sta/dbSta.hh"
 #include "gui/gui.h"
+#include "insertBufferDialog.h"
 #include "odb/db.h"
 #include "odb/dbObject.h"
 #include "odb/dbShape.h"
@@ -617,7 +620,7 @@ Descriptor::Properties DbInstDescriptor::getDBProperties(
     } else {
       net_value = gui->makeSelected(net);
     }
-    iterms.push_back({gui->makeSelected(iterm), net_value});
+    iterms.emplace_back(gui->makeSelected(iterm), net_value);
   }
   props.emplace_back("ITerms", iterms);
 
@@ -650,13 +653,13 @@ Descriptor::Properties DbInstDescriptor::getDBProperties(
   const auto xform = inst->getTransform();
   for (auto* obs : inst->getMaster()->getObstructions()) {
     if (auto* layer = obs->getTechLayer()) {
-      obs_layers.push_back(
-          {gui->makeSelected(layer),
-           gui->makeSelected(DbBoxDescriptor::BoxWithTransform{obs, xform})});
+      obs_layers.emplace_back(
+          gui->makeSelected(layer),
+          gui->makeSelected(DbBoxDescriptor::BoxWithTransform{obs, xform}));
     } else if (auto* via = obs->getTechVia()) {
-      obs_layers.push_back(
-          {gui->makeSelected(via),
-           gui->makeSelected(DbBoxDescriptor::BoxWithTransform{obs, xform})});
+      obs_layers.emplace_back(
+          gui->makeSelected(via),
+          gui->makeSelected(DbBoxDescriptor::BoxWithTransform{obs, xform}));
     }
   }
   if (!obs_layers.empty()) {
@@ -1538,7 +1541,7 @@ std::set<odb::Line> DbNetDescriptor::convertGuidesToLines(
       }
     }
 
-    std::sort(guide_pts.begin(), guide_pts.end());
+    std::ranges::sort(guide_pts);
     for (int i = 1; i < guide_pts.size(); i++) {
       lines.emplace(guide_pts[i - 1], guide_pts[i]);
     }
@@ -1548,9 +1551,9 @@ std::set<odb::Line> DbNetDescriptor::convertGuidesToLines(
           = [&guide_pts, &lines, &io_map, &sources, &sinks](
                 odb::dbObject* dbterm, const odb::Point& term) {
               // draw shortest flywire
-              std::stable_sort(
-                  guide_pts.begin(),
-                  guide_pts.end(),
+              std::ranges::stable_sort(
+                  guide_pts,
+
                   [&term](const odb::Point& pt0, const odb::Point& pt1) {
                     return odb::Point::manhattanDistance(term, pt0)
                            < odb::Point::manhattanDistance(term, pt1);
@@ -1989,6 +1992,68 @@ Descriptor::Actions DbNetDescriptor::getActions(const std::any& object) const
                                              return makeSelected(net);
                                            }});
     }
+  }
+  int drivers = 0;
+  for (auto* iterm : net->getITerms()) {
+    const auto iotype = iterm->getIoType();
+    if (iotype == odb::dbIoType::OUTPUT || iotype == odb::dbIoType::INOUT) {
+      drivers++;
+    }
+  }
+  for (auto* bterm : net->getBTerms()) {
+    const auto iotype = bterm->getIoType();
+    if (iotype == odb::dbIoType::INPUT || iotype == odb::dbIoType::INOUT
+        || iotype == odb::dbIoType::FEEDTHRU) {
+      drivers++;
+    }
+  }
+
+  if (drivers <= 1) {
+    actions.push_back(
+        {"Insert Buffer", [this, net]() {
+           InsertBufferDialog dialog(net, sta_, nullptr);
+           if (dialog.exec() == QDialog::Accepted) {
+             odb::dbMaster* master = dialog.getSelectedMaster();
+             odb::dbObject* driver = nullptr;
+             std::set<odb::dbObject*> loads;
+             dialog.getSelection(driver, loads);
+
+             std::string buf_name = dialog.getBufferName().toStdString();
+             std::string net_name = dialog.getNetName().toStdString();
+             const char* buf_p
+                 = buf_name.empty() ? kDefaultBufBaseName : buf_name.c_str();
+             const char* net_p
+                 = net_name.empty() ? kDefaultNetBaseName : net_name.c_str();
+
+             try {
+               odb::dbInst* buffer_inst = nullptr;
+               if (driver) {
+                 buffer_inst = net->insertBufferAfterDriver(
+                     driver,
+                     master,
+                     nullptr,
+                     buf_p,
+                     net_p,
+                     odb::dbNameUniquifyType::IF_NEEDED);
+               } else if (!loads.empty()) {
+                 buffer_inst = net->insertBufferBeforeLoads(
+                     loads,
+                     master,
+                     nullptr,
+                     buf_p,
+                     net_p,
+                     odb::dbNameUniquifyType::IF_NEEDED);
+               }
+               Gui::get()->redraw();
+               if (buffer_inst) {
+                 return Gui::get()->makeSelected(buffer_inst);
+               }
+             } catch (const std::exception& e) {
+               QMessageBox::critical(nullptr, "Error", e.what());
+             }
+           }
+           return makeSelected(net);
+         }});
   }
   return actions;
 }
@@ -2594,7 +2659,7 @@ Descriptor::Properties DbViaDescriptor::getDBProperties(odb::dbVia* via) const
     for (auto box : via->getBoxes()) {
       auto layer = box->getTechLayer();
       auto rect = box->getBox();
-      shapes.push_back({gui->makeSelected(layer), rect});
+      shapes.emplace_back(gui->makeSelected(layer), rect);
     }
     props.emplace_back("Shapes", shapes);
   } else {
@@ -2602,7 +2667,7 @@ Descriptor::Properties DbViaDescriptor::getDBProperties(odb::dbVia* via) const
     for (auto box : via->getBoxes()) {
       auto layer = box->getTechLayer();
       auto rect = box->getBox();
-      shapes.push_back({gui->makeSelected(layer), rect});
+      shapes.emplace_back(gui->makeSelected(layer), rect);
     }
     props.emplace_back("Shapes", shapes);
   }
@@ -2726,9 +2791,9 @@ Descriptor::Editors DbBlockageDescriptor::getEditors(
                blockage->setMaxDensity(density);
                return true;
              }
-           } catch (std::out_of_range&) {
+           } catch (std::out_of_range&) {  // NOLINT(bugprone-empty-catch)
              // catch poorly formatted string
-           } catch (std::logic_error&) {
+           } catch (std::logic_error&) {  // NOLINT(bugprone-empty-catch)
              // catch poorly formatted string
            }
          }
@@ -3246,7 +3311,7 @@ Descriptor::Properties DbTermAccessPointDescriptor::getProperties(
       } else {
         name = static_cast<odb::dbVia*>(via)->getName();
       }
-      vias_property.push_back({cnt++, name});
+      vias_property.emplace_back(cnt++, name);
     }
     props.emplace_back(fmt::format("{} cut vias", cuts + 1), vias_property);
   }
@@ -4818,8 +4883,9 @@ Descriptor::Properties DbRowDescriptor::getDBProperties(odb::dbRow* row) const
                     {"Site", gui->makeSelected(row->getSite())}});
   odb::Point origin_pt = row->getOrigin();
   PropertyList origin;
-  origin.push_back({"X", Property::convert_dbu(origin_pt.x(), true)});
-  origin.push_back({"Y", Property::convert_dbu(origin_pt.y(), true)});
+  origin.emplace_back("X", Property::convert_dbu(origin_pt.x(), true));
+  origin.emplace_back("Y", Property::convert_dbu(origin_pt.y(), true));
+
   props.emplace_back("Origin", origin);
 
   props.emplace_back("Orientation", row->getOrient().getString());
@@ -5764,10 +5830,10 @@ Descriptor::Properties DbMasterEdgeTypeDescriptor::getDBProperties(
 
   PropertyList range;
   if (edge->getRangeBegin() != -1) {
-    range.push_back({"Begin", edge->getRangeBegin()});
+    range.emplace_back("Begin", edge->getRangeBegin());
   }
   if (edge->getRangeEnd() != -1) {
-    range.push_back({"End", edge->getRangeEnd()});
+    range.emplace_back("End", edge->getRangeEnd());
   }
   if (!range.empty()) {
     props.emplace_back("Range", range);

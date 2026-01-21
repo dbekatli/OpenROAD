@@ -1038,22 +1038,16 @@ uint32_t extMeasure::mergeContextArray(Array1D<int>* srcContext,
     return 0;
   }
   p1 = srcContext->get(jj - 1);
-  if (p1 < pmin) {
-    p1 = pmin;
-  }
+  p1 = std::max(p1, pmin);
   p2 = srcContext->get(jj++);
-  if (p2 > pmax) {
-    p2 = pmax;
-  }
+  p2 = std::min(p2, pmax);
   while (jj < ssize - 2) {
     n1 = srcContext->get(jj++);
     if (n1 >= pmax) {
       break;
     }
     n2 = srcContext->get(jj++);
-    if (n2 > pmax) {
-      n2 = pmax;
-    }
+    n2 = std::min(n2, pmax);
     if (n1 - p2 <= minS) {
       p2 = n2;
     } else {
@@ -1637,9 +1631,7 @@ uint32_t extMeasure::measureDiagFullOU()
   uint32_t maxDist = _extMain->_ccContextDepth;
   int upperLimit = _met + maxDist >= _layerCnt ? _layerCnt : _met + maxDist;
   int lowerLimit = _met - maxDist;
-  if (lowerLimit < 0) {
-    lowerLimit = 0;
-  }
+  lowerLimit = std::max(lowerLimit, 0);
 
   for (_overMet = _met + 1; _overMet < upperLimit; _overMet++) {
     int totUnderLen = underFlowStep(_tmpSrcTable, _overTable);
@@ -1981,7 +1973,7 @@ void extMeasure::calcDiagRC(int rsegId1,
 
     capTable[ii] = len * getDiagUnderCC(rcModel, diagWidth, diagDist, tgtMet);
     _rc[ii]->diag_ += capTable[ii];
-    double ccTable[10];
+    double ccTable[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     if (_dist > 0) {
       extDistRC* rc = getDiagUnderCC2(rcModel, diagWidth, diagDist, tgtMet);
       if (rc) {
@@ -2040,7 +2032,7 @@ void extMeasure::areaCap(int rsegId1,
                          uint32_t len,
                          uint32_t tgtMet)
 {
-  double capTable[10];
+  double capTable[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint32_t modelCnt = _metRCTable.getCnt();
   for (uint32_t ii = 0; ii < modelCnt; ii++) {
     extMetRCTable* rcModel = _metRCTable.get(ii);
@@ -2119,9 +2111,7 @@ bool extMeasure::verticalCap(int rsegId1,
     if (diagDist > tgtWidth) {
       double scale = 0.25 * diagDist / tgtWidth;
       scale = 1.0 / scale;
-      if (scale > 0.5) {
-        scale = 0.5;
-      }
+      scale = std::min(scale, 0.5);
       frCap *= scale;
     }
     if (rseg2 != nullptr) {
@@ -2142,7 +2132,7 @@ void extMeasure::calcDiagRC(int rsegId1,
                             uint32_t tgtMet)
 {
   int DOUBLE_DIAG = 1;
-  double capTable[10];
+  double capTable[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint32_t modelCnt = _metRCTable.getCnt();
   for (uint32_t ii = 0; ii < modelCnt; ii++) {
     extMetRCTable* rcModel = _metRCTable.get(ii);
@@ -2274,9 +2264,7 @@ void extMeasure::OverSubRC(dbRSeg* rseg1,
   int res_lenOverSub = 0;
 
   int lenOverSub = _len - ouCovered;
-  if (lenOverSub < 0) {
-    lenOverSub = 0;
-  }
+  lenOverSub = std::max(lenOverSub, 0);
 
   bool rvia1 = rseg1 != nullptr && isVia(rseg1->getId());
 
@@ -2440,9 +2428,7 @@ int extMeasure::computeAndStoreRC(dbRSeg* rseg1, dbRSeg* rseg2, int srcCovered)
   // Case where the geometric search returns no neighbor found
   // _dist is infinit
   if (_dist < 0) {
-    if (totLenCovered < 0) {
-      totLenCovered = 0;
-    }
+    totLenCovered = std::max(totLenCovered, 0);
 
     _underMet = 0;
 
@@ -2650,7 +2636,7 @@ void extMeasure::getDgOverlap(SEQ* sseq,
     return;
   }
 
-  for (; idx < (int) dgContext->getCnt(); idx++) {
+  for (; idx < dgContext->getCnt(); idx++) {
     tseq = dgContext->get(idx);
     if (tseq->_ur[lp] <= covered) {
       continue;
@@ -2693,7 +2679,7 @@ void extMeasure::getDgOverlap(SEQ* sseq,
     if (tseq->_ur[lp] >= sseq->_ur[lp]) {
       break;
     }
-    if (idx == (int) dgContext->getCnt() - 1 && covered < sseq->_ur[lp]) {
+    if (idx == dgContext->getCnt() - 1 && covered < sseq->_ur[lp]) {
       rseq = _seqPool->alloc();
       rseq->_ll[wp] = sseq->_ll[wp];
       rseq->_ur[wp] = sseq->_ur[wp];

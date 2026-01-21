@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2024-2025, The OpenROAD Authors
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -631,7 +632,9 @@ int extMeasureRC::PrintAllGrids(uint32_t dir, FILE* fp, uint32_t mode)
 int extMeasureRC::ConnectWires(uint32_t dir)
 {
   if (_extMain->_dbgOption > 1) {
-    PrintAllGrids(dir, OpenPrintFile(dir, "wires.org"), 0);
+    FILE* file = OpenPrintFile(dir, "wires.org");
+    PrintAllGrids(dir, file, 0);
+    fclose(file);
   }
 
   uint32_t cnt = 0;
@@ -660,7 +663,9 @@ int extMeasureRC::ConnectWires(uint32_t dir)
     }
   }
   if (_extMain->_dbgOption > 1) {
-    PrintAllGrids(dir, OpenPrintFile(dir, "wires"), 0);
+    FILE* file = OpenPrintFile(dir, "wires");
+    PrintAllGrids(dir, file, 0);
+    fclose(file);
   }
   return cnt;
 }
@@ -741,9 +746,7 @@ int extMeasureRC::FindDiagonalNeighbors(uint32_t dir,
 
       uint32_t m1 = jj + 1;
       uint32_t m2 = jj + 1 + lookUpLevel;
-      if (m2 > levelCnt) {
-        m2 = levelCnt;
-      }
+      m2 = std::min(m2, levelCnt);
 
       ResetFirstWires(m1, m2, dir, firstWireTable);
 
@@ -911,9 +914,7 @@ int extMeasureRC::FindDiagonalNeighbors_vertical_up(uint32_t dir,
 
       uint32_t m1 = jj + 1;
       uint32_t m2 = jj + 1 + lookUpLevel;
-      if (m2 > levelCnt) {
-        m2 = levelCnt;
-      }
+      m2 = std::min<uint32_t>(m2, levelCnt);
 
       ResetFirstWires(m1, m2, dir, firstWireTable);
 
@@ -978,9 +979,7 @@ int extMeasureRC::FindDiagonalNeighbors_vertical_down(uint32_t dir,
 
       int m1 = jj - 1;
       int m2 = jj - 1 - lookUpLevel;
-      if (m2 < 1) {
-        m2 = 1;
-      }
+      m2 = std::max(m2, 1);
 
       ResetFirstWires(m2, m1, dir, firstWireTable);
 
@@ -1040,9 +1039,7 @@ int extMeasureRC::FindDiagonalNeighbors_down(uint32_t dir,
       continue;
     }
     int m2 = jj - 1 - lookUpLevel;
-    if (m2 < 1) {
-      m2 = 1;
-    }
+    m2 = std::max(m2, 1);
 
     Grid* netGrid = _search->getGrid(dir, jj);
     for (uint32_t tr = 0; tr < netGrid->getTrackCnt(); tr++)  // for all  tracks
