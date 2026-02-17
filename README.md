@@ -1,3 +1,10 @@
+# Buildind OpenROAD
+
+The `orbuild.sh` script can be used to compile and install the toolchain necessary to build OpenROAD(gcc, etc.), its dependencies, and OpenROAD itself. First, run it with the `-t` flag to install the toolchain, then with the `-d` flag to install the dependencies, and then without any flags to build OpenROAD itself. This will install everything under a directory called `prefix`, which contains the usual `bin`, `lib`, and `lib64` subfolders. The LD_LIBRARY_PATH variable needs to be used to make the OpenROAD binary use the correct dynamic libraries. 
+
+The executable openroad-wrapper is provided as a convenience script that can be used in place of the usual OpenROAD binary and sets the LD_LIBRARY_PATH automatically. 
+
+
 # OpenROAD
 
 [![Build Status](https://jenkins.openroad.tools/buildStatus/icon?job=OpenROAD-Public%2Fmaster)](https://jenkins.openroad.tools/job/OpenROAD-Public/job/master/)
